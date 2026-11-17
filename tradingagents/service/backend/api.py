@@ -150,7 +150,6 @@ def create_app(*, repository, authenticator, vault, probe, storage, dispatcher: 
                         else {"chatgpt": "PERSONAL_OWNER_ONLY"}
                     )
                 ),
-                "ollama": "HOSTED_ENDPOINT_NOT_CONFIGURED",
                 "openai_compatible": "CUSTOM_ENDPOINTS_DISABLED",
                 "azure": "HOSTED_ENDPOINT_NOT_CONFIGURED",
                 "bedrock": "PER_USER_IAM_NOT_CONFIGURED",

@@ -231,7 +231,7 @@ class ProviderSpec:
     """Declarative config for one OpenAI-compatible provider.
 
     The OpenAI-compatible family (OpenAI, xAI, DeepSeek, Qwen, GLM, MiniMax,
-    OpenRouter, Ollama, and any user endpoint) all speak the same Chat
+    OpenRouter and custom endpoints) all speak the same Chat
     Completions API and differ only by these fields — so one row here replaces
     the former per-provider base-URL dict, auth handling, and client-class
     branches. Native Anthropic / Google use their own clients (genuinely
@@ -245,7 +245,6 @@ class ProviderSpec:
 
     chat_class: type = NormalizedChatOpenAI   # provider quirks live in the subclass
     base_url: str | None = None            # default endpoint (None -> SDK default)
-    base_url_env: str | None = None        # env var that overrides base_url (e.g. OLLAMA_BASE_URL)
     key_optional: bool = False                # don't require/prompt; send a placeholder if unset
     placeholder_key: str = "EMPTY"            # sent when no key is available (keyless local servers)
     require_base_url: bool = False            # error if no base_url is resolved (generic endpoint)
@@ -275,9 +274,6 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderSpec] = {
     "kimi":       ProviderSpec(base_url="https://api.moonshot.ai/v1"),
     "groq":       ProviderSpec(base_url="https://api.groq.com/openai/v1"),
     "nvidia":     ProviderSpec(base_url="https://integrate.api.nvidia.com/v1"),
-    "ollama":     ProviderSpec(base_url="http://localhost:11434/v1", base_url_env="OLLAMA_BASE_URL",
-                               key_optional=True, placeholder_key="ollama",
-                               chat_class=LocalCompatibleChatOpenAI),
     # The person's ChatGPT plan, through their own sign-in.
     "chatgpt":    ProviderSpec(base_url="https://api.openai.com/v1", chat_class=ChatGPTPlanChatOpenAI,
                                use_responses_api=True, credential=_chatgpt_credential,
@@ -323,12 +319,11 @@ def _is_native_openai_base_url(base_url: str | None) -> bool:
 
 
 class OpenAIClient(BaseLLMClient):
-    """Client for OpenAI, Ollama, OpenRouter, and xAI providers.
+    """Client for OpenAI, OpenRouter, and xAI providers.
 
     For native OpenAI models, uses the Responses API (/v1/responses) which
     supports reasoning_effort with function tools across all model families
-    (GPT-4.1, GPT-5). Third-party compatible providers (xAI, OpenRouter,
-    Ollama) use standard Chat Completions.
+    (GPT-4.1, GPT-5). Third-party compatible providers (xAI, OpenRouter) use standard Chat Completions.
     """
 
     def __init__(
@@ -351,11 +346,7 @@ class OpenAIClient(BaseLLMClient):
         if spec is not None:
             chat_cls = spec.chat_class
 
-            # base_url precedence: explicit client base_url (carries the config /
-            # TRADINGAGENTS_LLM_BACKEND_URL value) > provider env override (e.g.
-            # OLLAMA_BASE_URL) > provider default. None means use the SDK default.
-            env_base_url = os.environ.get(spec.base_url_env) if spec.base_url_env else None
-            base_url = self.base_url or env_base_url or spec.base_url
+            base_url = self.base_url or spec.base_url
             check_endpoint(self.provider, base_url)
             if spec.require_base_url and not base_url:
                 raise ValueError(

@@ -77,8 +77,6 @@ jobs:
         with:
           python-version: "3.12"
       - name: Build and test the installed wheel outside the checkout
-        env:
-          TRADINGAGENTS_NO_UPDATE_CHECK: '1'
         run: |
           python -m pip wheel --no-deps --wheel-dir "$RUNNER_TEMP/wheels" .
           python -m venv "$RUNNER_TEMP/wheel-smoke"
@@ -88,6 +86,7 @@ jobs:
           "$bin/python" -m pip install "$RUNNER_TEMP"/wheels/*.whl
           "$bin/python" -m pip check
           "$bin/python" -c "import tradingagents, cli.main"
+          "$bin/finbotagents" --help
           "$bin/tradingagents" --help
 
   lint:

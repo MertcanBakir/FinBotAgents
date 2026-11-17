@@ -10,11 +10,11 @@ FROM builder AS test-runner
 RUN pip install --no-cache-dir -c constraints/worker.txt '.[dev,backend]'
 
 FROM test-runner AS test
-RUN TRADINGAGENTS_NO_UPDATE_CHECK=1 python -m pytest -p no:cacheprovider -q --tb=short
+RUN python -m pytest -p no:cacheprovider -q --tb=short
 
 FROM python:3.13-slim
 LABEL io.finbot.backend-schema="2"
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 TRADINGAGENTS_NO_UPDATE_CHECK=1
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 RUN useradd --create-home appuser && install -d -m 0700 -o appuser -g appuser /data

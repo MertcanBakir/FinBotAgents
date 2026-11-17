@@ -15,7 +15,6 @@ x-backend: &backend
   security_opt: [no-new-privileges:true]
   environment: &backend-environment
     LUCRARI_BACKEND_SETTINGS_FILE: /run/private/settings.json
-    TRADINGAGENTS_NO_UPDATE_CHECK: "1"
     TRADINGAGENTS_CACHE_DIR: /tmp/market-cache
     LANGCHAIN_TRACING_V2: "false"
     LANGSMITH_TRACING: "false"
@@ -31,7 +30,6 @@ services:
     environment:
       LUCRARI_BACKEND_SETTINGS_FILE: /run/private/settings.json
       LUCRARI_DISPATCHER: database
-      TRADINGAGENTS_NO_UPDATE_CHECK: "1"
     volumes:
       - ${LUCRARI_PRIVATE_DIR:?Set private configuration directory}/settings.json:/run/private/settings.json:ro
     expose: ["8000"]

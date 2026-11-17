@@ -8,7 +8,6 @@ import typer
 from rich.align import Align
 from rich.panel import Panel
 
-from cli import updates
 from cli.display import (
     console,
 )
@@ -21,7 +20,6 @@ from cli.prompts import (
     ask_openai_reasoning_effort,
     ask_output_language,
     ask_qwen_region,
-    confirm_ollama_endpoint,
     detect_asset_type,
     ensure_api_key,
     ensure_signed_in,
@@ -120,29 +118,23 @@ def _prompt_selections(prefs, flags):
         welcome_ascii = f.read()
 
     welcome_content = f"{welcome_ascii}\n"
-    welcome_content += "[bold green]TradingAgents: Multi-Agents LLM Financial Trading Framework - CLI[/bold green]\n\n"
+    welcome_content += "[bold green]FinBotAgents: Lucrari analysis CLI[/bold green]\n\n"
     welcome_content += "[bold]Workflow Steps:[/bold]\n"
     welcome_content += "I. Analyst Team → II. Research Team → III. Trader → IV. Risk Management → V. Portfolio Management\n\n"
     welcome_content += (
-        "[dim]Built by [Tauric Research](https://github.com/TauricResearch)[/dim]"
+        "[dim]FinBotAgents · Based on TradingAgents[/dim]"
     )
 
     welcome_box = Panel(
         welcome_content,
         border_style="green",
         padding=(1, 2),
-        title="Welcome to TradingAgents",
-        subtitle="Multi-Agents LLM Financial Trading Framework",
+        title="Welcome to FinBotAgents",
+        subtitle="Lucrari analysis backend",
     )
     console.print(Align.center(welcome_box))
     console.print()
     console.print()  # Add vertical space before announcements
-
-    # What's new comes from a cache refreshed in the background, and only for
-    # someone at a terminal: a run never waits on it and unattended runs skip it.
-    if updates.enabled():
-        updates.show(console)
-        updates.start_background_refresh()
 
     def create_question_box(title, prompt, default=None):
         box_content = f"[bold]{title}[/bold]\n"
@@ -299,12 +291,6 @@ def _prompt_selections(prefs, flags):
             remembered_url = (prefs.get("backend_url")
                               if prefs.get("llm_provider") == selected_llm_provider else None)
             backend_url = prompt_openai_compatible_url(remembered_url)
-
-        # For Ollama, surface the resolved endpoint (OLLAMA_BASE_URL vs default)
-        # before model selection so it's obvious where we're connecting.
-        if selected_llm_provider == "ollama":
-            confirm_ollama_endpoint(backend_url)
-
 
     _check_tier_providers(selected_llm_provider, backend_url)
 

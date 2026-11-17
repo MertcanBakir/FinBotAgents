@@ -5,6 +5,8 @@ text can inject; the Markdown report is unchanged.
 """
 
 import re
+from base64 import b64decode
+from importlib.resources import files
 
 import pytest
 
@@ -56,7 +58,10 @@ def test_the_page_loads_nothing_and_runs_nothing(tmp_path):
     page = _html(tmp_path)
     assert "Content-Security-Policy" in page and "default-src 'none'" in page
     assert "<script" not in page.lower()
-    assert not re.search(r'<(img|link|iframe|object|embed)\b', page, re.IGNORECASE)
+    assert not re.search(r'<(link|iframe|object|embed)\b', page, re.IGNORECASE)
+    assert re.findall(r'<img\b[^>]*src="([^"]+)"', page) == [
+        re.search(r'<a class="logo"[^>]*><img src="(data:image/png;base64,[^"]+)"', page)[1]
+    ]
 
 
 @pytest.mark.unit
@@ -64,7 +69,8 @@ def test_report_text_cannot_inject_markup_or_fetch_anything(tmp_path):
     hostile = ("<script>alert(1)</script> <img src=x onerror=alert(1)>\n\n"
                "![pixel](https://tracker.example/p.png) [x](javascript:alert(1))")
     page = _html(tmp_path, news_report=hostile)
-    assert "<script>alert" not in page and "<img" not in page.lower()
+    assert "<script>alert" not in page
+    assert page.lower().count("<img") == 1
     assert "tracker.example/p.png" not in re.findall(r'(?:src|href)="([^"]*)"', page)
     assert 'href="javascript:' not in page
 
@@ -140,13 +146,14 @@ def test_the_page_heading_is_the_ticker_and_its_rating(tmp_path):
 
 @pytest.mark.unit
 def test_the_header_carries_the_official_logo_unaltered(tmp_path):
-    from importlib.resources import files
-
-    logo = files("tradingagents").joinpath("assets/tauric-logo.svg").read_text(encoding="utf-8").strip()
+    logo = files("tradingagents").joinpath("assets/finbotagents.png").read_bytes()
     page = _html(tmp_path)
     header = page[page.index("<header"):page.index("</header>")]
-    assert logo in header                           # drawn in the page, nothing fetched
-    assert 'href="https://tauric.ai"' in header and 'aria-label="Tauric Research"' in header
+    embedded = re.search(r'src="data:image/png;base64,([^"]+)"', header)[1]
+    assert b64decode(embedded, validate=True) == logo
+    assert logo.startswith(b"\x89PNG\r\n\x1a\n")
+    assert 'href="https://github.com/MertcanBakir/FinBotAgents"' in header
+    assert 'alt="FinBotAgents"' in header
     assert header.index('class="logo"') < header.index("<h1")   # leads the header, above the title
 
 
@@ -154,21 +161,7 @@ def test_the_header_carries_the_official_logo_unaltered(tmp_path):
 def test_the_page_credits_its_maker_in_a_line_of_text(tmp_path):
     page = _html(tmp_path)
     footer = page[page.index('<footer class="credit">'):page.index("</footer>")]
-    assert re.sub(r"<[^>]+>", "", footer).split() == ["TradingAgents", "powered", "by", "Tauric", "Research"]
-    # The logo already leads to tauric.ai; the credit leads to the project and the org.
+    assert re.sub(r"<[^>]+>", "", footer).split() == ["FinBotAgents", "·", "Based", "on", "TradingAgents"]
+    assert 'href="https://github.com/MertcanBakir/FinBotAgents"' in footer
     assert 'href="https://github.com/TauricResearch/TradingAgents"' in footer
-    assert 'href="https://github.com/TauricResearch"' in footer and "tauric.ai" not in footer
-    assert "<svg" not in footer and 'class="brand"' in footer
     assert page.index("</main>") < page.index('<footer class="credit">')
-
-
-@pytest.mark.unit
-def test_the_packaged_logo_stays_inert(tmp_path):
-    # The logo is drawn inside every report, so it may only ever hold shapes:
-    # no script, event handler, link, embedded document or external reference.
-    from importlib.resources import files
-
-    logo = files("tradingagents").joinpath("assets/tauric-logo.svg").read_text(encoding="utf-8")
-    tags = set(re.findall(r"<\s*([a-zA-Z][\w:-]*)", logo))
-    assert tags <= {"svg", "path", "rect", "circle", "g", "defs", "clipPath", "linearGradient", "stop"}
-    assert not re.search(r"\son\w+\s*=|href|url\(|@import|javascript:|<!entity|<!doctype", logo, re.IGNORECASE)

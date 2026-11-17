@@ -91,7 +91,7 @@ The upstream CLI's OAuth is unchanged. Hosted ChatGPT linking remains disabled
 with `HOSTED_OAUTH_APPROVAL_REQUIRED` pending hosted-app approval and a registered
 per-user redirect/client integration. Do not upload a local auth JSON to this API.
 See [OpenAI plan-usage scope](https://developers.openai.com/siwc/token-sharing-open-source).
-Azure, Bedrock, Ollama and arbitrary compatible URLs are also unavailable in this
+Azure, Bedrock and arbitrary compatible URLs are also unavailable in this
 hosted adapter until operator-controlled endpoint/IAM routing exists. The local
 CLI still supports them. There is no unvalidated URL field/SSRF escape hatch.
 

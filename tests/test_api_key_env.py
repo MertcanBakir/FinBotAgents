@@ -23,7 +23,7 @@ def test_every_select_llm_provider_choice_has_an_entry():
         "qwen", "qwen-cn",
         "glm", "glm-cn",
         "minimax", "minimax-cn",
-        "openrouter", "azure", "ollama",
+        "openrouter", "azure",
     }
     assert expected.issubset(PROVIDER_API_KEY_ENV.keys())
 
@@ -50,8 +50,8 @@ def test_known_providers_resolve(provider, env_var):
     assert get_api_key_env(provider) == env_var
 
 
-def test_ollama_has_no_key():
-    assert get_api_key_env("ollama") is None
+def test_custom_endpoint_has_optional_key_env():
+    assert get_api_key_env("openai_compatible") == "OPENAI_COMPATIBLE_API_KEY"
 
 
 def test_unknown_provider_returns_none():
@@ -79,11 +79,11 @@ def test_ensure_api_key_returns_existing(monkeypatch, prompts):
     assert result == "sk-already-set"
 
 
-def test_ensure_api_key_no_op_for_ollama(monkeypatch, prompts):
-    # Even with no env var set, ollama should not prompt and should return None.
+def test_ensure_api_key_no_op_for_custom_endpoint(monkeypatch, prompts):
+    # Even with no env var set, a custom endpoint should not prompt and should return None.
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     with patch.object(prompts, "questionary") as mock_q:
-        result = prompts.ensure_api_key("ollama")
+        result = prompts.ensure_api_key("openai_compatible")
     assert result is None
     mock_q.password.assert_not_called()
 
