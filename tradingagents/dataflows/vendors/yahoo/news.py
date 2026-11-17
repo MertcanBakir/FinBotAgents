@@ -7,10 +7,12 @@ import yfinance as yf
 from dateutil.relativedelta import relativedelta
 
 from tradingagents.dataflows.config import get_config
-from tradingagents.dataflows.date_window import coverage_gap, in_window
+from tradingagents.dataflows.date_window import coverage_gap, in_window, to_utc
 from tradingagents.dataflows.errors import VendorUnavailableError
 from tradingagents.dataflows.symbols import normalize_symbol
 from tradingagents.dataflows.vendors.yahoo.common import yf_retry
+
+_EARLIEST = datetime.min.replace(tzinfo=UTC)
 
 
 def _extract_article_data(article: dict) -> dict:
@@ -61,21 +63,28 @@ def _search_news(canonical: str, limit: int) -> tuple[list, bool]:
     relevance-picked sample, and some are tagged loosely; only those tagged with
     the symbol are about it.
     """
-    search = yf_retry(lambda: yf.Search(canonical, news_count=limit))
-    if search is None:  # Yahoo answered "not found": its search is down
+    def fetch():
+        search = yf.Search(canonical, news_count=limit)
+        return search.news or [], search.quotes or []
+
+    result = yf_retry(fetch)
+    if result is None:  # Yahoo answered "not found": its search is down
         return [], False
+    news, quotes = result
     tagged = [
-        a for a in (search.news or [])
+        a for a in news
         if canonical in (t.upper() for t in a.get("relatedTickers") or [])
     ]
-    knows = any((q.get("symbol") or "").upper() == canonical for q in search.quotes or [])
-    return tagged, knows or bool(search.news)
+    knows = any((q.get("symbol") or "").upper() == canonical for q in quotes)
+    return tagged, knows or bool(news)
 
 
 def _format_articles(articles: list[dict]) -> str:
     out = ""
     for data in articles:
-        out += f"### {data['title']} (source: {data['publisher']})\n"
+        published = data["pub_date"]
+        stamp = f", published {to_utc(published):%Y-%m-%d %H:%M UTC}" if published else ""
+        out += f"### {data['title']} (source: {data['publisher']}{stamp})\n"
         if data["summary"]:
             out += f"{data['summary']}\n"
         if data["link"]:
@@ -104,7 +113,11 @@ def get_news_yfinance(
     canonical = normalize_symbol(ticker)
     resolved = "" if canonical == ticker else f" (resolved to {canonical})"
     subject = f"news for {ticker}{resolved}"
-    feed = yf_retry(lambda: yf.Ticker(canonical).get_news(count=article_limit)) or []
+    try:
+        feed = yf_retry(lambda: yf.Ticker(canonical).get_news(count=article_limit)) or []
+    except VendorUnavailableError:
+        # The quote feed and search use different Yahoo endpoints.
+        feed = []
     articles = [_extract_article_data(a) for a in feed]
     if not feed:
         found, answered = _search_news(canonical, article_limit)
@@ -138,6 +151,8 @@ def get_global_news_yfinance(
     as_of_date: str,
     look_back_days: int | None = None,
     limit: int | None = None,
+    *,
+    sector_query: str | None = None,
 ) -> str:
     """
     Retrieve global/macro economic news using yfinance Search.
@@ -157,42 +172,57 @@ def get_global_news_yfinance(
         look_back_days = config["global_news_lookback_days"]
     if limit is None:
         limit = config["global_news_article_limit"]
-    search_queries = config["global_news_queries"]
+    search_queries = list(config["global_news_queries"])
+    if sector_query:
+        search_queries.insert(0, sector_query)
 
     curr_dt = datetime.strptime(as_of_date, "%Y-%m-%d")
     start_dt = curr_dt - relativedelta(days=look_back_days)
     start_date = start_dt.strftime("%Y-%m-%d")
 
-    in_window_news = []
-    seen_titles = set()
+    groups = []
+    first_error = None
 
     for query in search_queries:
-        found = yf_retry(lambda q=query: yf.Search(
-            query=q,
-            news_count=limit,
-            enable_fuzzy_query=True,
-        ).news)
-
+        try:
+            found = yf_retry(lambda q=query: yf.Search(
+                query=q,
+                news_count=limit,
+                enable_fuzzy_query=True,
+            ).news)
+        except VendorUnavailableError as exc:
+            first_error = first_error or exc
+            continue
+        group = []
         for article in found or []:
-            # Window first: the limit counts what the run may read, so an
-            # out-of-window article must not spend the budget or cut the
-            # remaining searches short (#1356). Flat articles are filtered
-            # on the same rule, so none can leak future news (#1007).
             data = _extract_article_data(article)
-            if not in_window(data["pub_date"], start_dt, curr_dt):
-                continue
-            if data["title"] and data["title"] not in seen_titles:
-                seen_titles.add(data["title"])
-                in_window_news.append(data)
+            if in_window(data["pub_date"], start_dt, curr_dt):
+                group.append(data)
+        group.sort(key=lambda item: to_utc(item["pub_date"]) if item["pub_date"] else _EARLIEST,
+                   reverse=True)
+        groups.append(group)
 
+    in_window_news = []
+    seen_titles = set()
+    for rank in range(max(map(len, groups), default=0)):
+        for group in groups:
+            if len(in_window_news) >= limit:
+                break
+            if rank < len(group):
+                item = group[rank]
+                title = item["title"].casefold()
+                if title not in seen_titles:
+                    seen_titles.add(title)
+                    in_window_news.append(item)
         if len(in_window_news) >= limit:
             break
-
-    news_str = _format_articles(in_window_news[:limit])
+    news_str = _format_articles(in_window_news)
 
     # Nothing fell inside the window -> say so rather than return an
     # empty-bodied report (#993).
     if not news_str:
+        if first_error:
+            raise first_error
         # Results merge several fuzzy searches, so their timestamps prove no
         # continuous coverage; judge the window against the present only.
         gap = coverage_gap((), start_date, as_of_date, "Yahoo Finance global news", "market news")

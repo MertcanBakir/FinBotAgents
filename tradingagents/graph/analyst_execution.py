@@ -1,15 +1,12 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from tradingagents.agents.analysts import news_analyst
-
 
 @dataclass(frozen=True)
 class AnalystNodeSpec:
     key: str
     agent_node: str
     report_key: str
-    tools: tuple = ()
 
 
 @dataclass(frozen=True)
@@ -34,7 +31,6 @@ ANALYST_NODE_SPECS: dict[str, AnalystNodeSpec] = {
         key="news",
         agent_node="News Analyst",
         report_key="news_report",
-        tools=news_analyst.TOOLS,
     ),
     "fundamentals": AnalystNodeSpec(
         key="fundamentals",

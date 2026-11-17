@@ -203,7 +203,7 @@ def _render_agent_text(md: MarkdownIt, text: str) -> str:
 # What each data category serves, as a reader would name it.
 _CATEGORY = {
     "core_stock_apis": "Prices", "technical_indicators": "Indicators", "fundamental_data": "Fundamentals",
-    "news_data": "News", "macro_data": "Macro", "prediction_markets": "Prediction markets",
+    "news_data": "News", "macro_data": "Macro",
 }
 
 

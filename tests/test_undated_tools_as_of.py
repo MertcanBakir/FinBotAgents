@@ -1,9 +1,4 @@
-"""Insider filings and prediction-market odds are bounded by the run's trade date.
-
-Neither tool takes a date from the model, so the run's trade_date is injected from
-graph state. Insider filings carry dates and are filtered to it; Polymarket serves
-only live odds, so a historical run withholds them.
-"""
+"""Verify that insider filing tools respect the analysis date."""
 
 from __future__ import annotations
 
@@ -14,7 +9,6 @@ import pytest
 
 from tradingagents.agents import tools
 from tradingagents.dataflows.date_window import get_current_date
-from tradingagents.dataflows.vendors import polymarket
 from tradingagents.dataflows.vendors.yahoo import (
     fundamentals as yahoo_fundamentals,
     market as yahoo_market,
@@ -42,23 +36,8 @@ def test_yfinance_insider_without_a_date_is_unfiltered():
 
 
 @pytest.mark.unit
-def test_polymarket_withholds_live_odds_from_a_historical_run():
-    with mock.patch.object(polymarket, "_request", side_effect=AssertionError("must not fetch")):
-        out = polymarket.get_prediction_markets("Fed rate cut", as_of_date="2025-06-01")
-    assert "withheld" in out
-
-
-@pytest.mark.unit
-def test_polymarket_serves_a_current_run():
-    with mock.patch.object(polymarket, "_request", return_value={"events": []}) as req:
-        polymarket.get_prediction_markets("Fed rate cut", as_of_date=get_current_date())
-    req.assert_called_once()
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("tool", [tools.get_insider_transactions,
-                                  tools.get_prediction_markets], ids=lambda t: t.name)
-def test_trade_date_is_injected_not_model_visible(tool):
+def test_insider_trade_date_is_injected_not_model_visible():
+    tool = tools.get_insider_transactions
     assert "trade_date" in tool.func.__code__.co_varnames
     props = tool.tool_call_schema.model_json_schema()["properties"]
     assert "trade_date" not in props and "curr_date" not in props
@@ -86,7 +65,6 @@ def test_a_historical_run_gets_the_current_name_only_as_an_identifier(monkeypatc
 @pytest.mark.unit
 def test_a_current_run_is_not_cluttered_with_a_vintage_note(monkeypatch):
     from tradingagents.agents.context import build_instrument_context
-    from tradingagents.dataflows.date_window import get_current_date
 
     today = build_instrument_context("EXMP", "stock", {"company_name": "Example Corp"},
                                      trade_date=get_current_date())

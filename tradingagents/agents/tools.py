@@ -255,6 +255,7 @@ def get_global_news(
     look_back_days: Annotated[int | None, "Days to look back; omit to use the configured default"] = None,
     limit: Annotated[int | None, "Max articles to return; omit to use the configured default"] = None,
     trade_date: Annotated[str, InjectedState("trade_date")] = "",
+    sector_query: Annotated[str | None, "Additional sector or instrument search"] = None,
 ) -> str:
     """
     Retrieve global news data.
@@ -270,7 +271,8 @@ def get_global_news(
     Returns:
         str: A formatted string containing global news data
     """
-    return route_to_vendor("get_global_news", as_of(curr_date, trade_date), look_back_days, limit)
+    options = {"sector_query": sector_query} if sector_query else {}
+    return route_to_vendor("get_global_news", as_of(curr_date, trade_date), look_back_days, limit, **options)
 
 
 @tool
@@ -320,30 +322,3 @@ def get_macro_indicators(
         str: A formatted markdown report of the macro series
     """
     return route_to_vendor("get_macro_indicators", indicator, as_of(curr_date, trade_date), look_back_days)
-
-
-@tool
-def get_prediction_markets(
-    topic: Annotated[
-        str,
-        "Event topic/keyword, e.g. 'Fed rate cut', 'recession 2026', "
-        "'US election', or a sector/company event.",
-    ],
-    limit: Annotated[int | None, "Max markets to return; omit for a default of 6"] = None,
-    trade_date: Annotated[str, InjectedState("trade_date")] = "",
-) -> str:
-    """
-    Retrieve live, market-implied probabilities for forward-looking events from
-    prediction markets (Polymarket): Fed decisions, recession, elections,
-    geopolitics, crypto. Returns the most-traded open markets matching the
-    topic, each with its implied probability, traded volume, resolution date,
-    and recent move. Uses the configured prediction_markets vendor.
-
-    Args:
-        topic (str): Event keyword(s) to search
-        limit (int): Max markets to return; omit for a default of 6
-
-    Returns:
-        str: A formatted markdown report of matching prediction markets
-    """
-    return route_to_vendor("get_prediction_markets", topic, limit, trade_date or None)

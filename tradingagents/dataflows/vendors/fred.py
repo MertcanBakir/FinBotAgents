@@ -8,13 +8,20 @@ A free API key (https://fred.stlouisfed.org/docs/api/api_key.html) is read from
 ``FRED_API_KEY``; if it is unset the vendor raises ``FredNotConfiguredError`` so
 the routing layer treats it as "unavailable" rather than a hard crash.
 """
+import hashlib
+import json
 import logging
 import os
+import time
+from contextlib import ExitStack
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import pytz
 
+from tradingagents.dataflows.config import get_config
 from tradingagents.dataflows.errors import VendorNotConfiguredError
+from tradingagents.dataflows.files import locked, replace_file
 from tradingagents.dataflows.net import get_scrubbed
 
 logger = logging.getLogger(__name__)
@@ -38,6 +45,7 @@ DEFAULT_LOOKBACK_DAYS = 365
 # Rows cap for the rendered table: recent values matter most for a decision, and
 # daily series (yields, VIX) over a long window would otherwise flood context.
 MAX_ROWS = 40
+_CACHE_TTL_SECONDS = 15 * 60
 
 # Curated human-friendly aliases -> FRED series IDs. Anything not listed is used
 # verbatim as a raw FRED series ID, so power users are never limited to this set.
@@ -201,7 +209,6 @@ def get_macro_data(
     # drop macro data silently. A past as_of_date is unaffected, so historical
     # point-in-time behaviour is preserved.
     pit = min(as_of_date, _fred_today())
-    realtime = {"realtime_start": pit, "realtime_end": pit}
 
     # Invalid LLM-supplied indicator: return guidance rather than raising, so a
     # bad argument doesn't abort the run (the routing layer also degrades macro
@@ -211,12 +218,51 @@ def get_macro_data(
     except ValueError as e:
         return f"FRED: {e}"
 
+    key = (series_id, as_of_date, start_date, pit)
+    config = get_config()
+    cache_root = config.get("fred_cache_dir") or config["data_cache_dir"]
+    digest = hashlib.sha256(json.dumps(key).encode()).hexdigest()
+    path = Path(cache_root) / "fred" / f"{digest}.json"
+
+    with ExitStack() as stack:
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            stack.enter_context(locked(path))
+        except OSError:
+            return _fetch_report(*key)[0]
+
+        cached = _read_cached_report(path)
+        if cached is not None:
+            return cached
+
+        report, has_observations = _fetch_report(*key)
+        if has_observations:
+            try:
+                replace_file(path, lambda temp: Path(temp).write_text(json.dumps(report), encoding="utf-8"))
+            except OSError:
+                logger.debug("Could not write FRED cache for %s", series_id)
+        return report
+
+
+def _read_cached_report(path: Path) -> str | None:
+    try:
+        if 0 <= time.time() - path.stat().st_mtime < _CACHE_TTL_SECONDS:
+            report = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(report, str) and report.startswith("## FRED:"):
+                return report
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def _fetch_report(series_id: str, as_of_date: str, start_date: str, pit: str) -> tuple[str, bool]:
+    realtime = {"realtime_start": pit, "realtime_end": pit}
     meta = _request("series", {"series_id": series_id, **realtime}).get("seriess") or []
     if not meta:
         return (
             f"FRED series '{series_id}' not found. Pass a known alias "
             f"(e.g. 'cpi', 'unemployment') or a valid FRED series ID."
-        )
+        ), False
     info = meta[0]
     title = info.get("title", series_id)
     units = info.get("units_short") or info.get("units", "")
@@ -255,7 +301,7 @@ def get_macro_data(
             f"vintage. The series may report less frequently than the window "
             f"(try a longer look_back_days), or have no vintage published by "
             f"then (unpublished as of {pit}, or before ALFRED coverage begins)."
-        )
+        ), False
 
     first_date, first_val = points[0]
     last_date, last_val = points[-1]
@@ -283,4 +329,4 @@ def get_macro_data(
         + "\n"
     )
 
-    return header + summary + note + table
+    return header + summary + note + table, True

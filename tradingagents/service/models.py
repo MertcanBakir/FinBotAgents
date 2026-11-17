@@ -84,7 +84,9 @@ class ServiceSettings(Contract):
     quick: LLMChoice
     deep: LLMChoice
     llm_max_retries: int = Field(default=1, ge=0, le=2, strict=True)
-    max_tool_rounds: int = Field(default=12, ge=1, le=20, strict=True)
+    # Older settings files may still contain this field. Analysts fetch data
+    # directly and no longer use it to control execution.
+    max_tool_rounds: int = Field(default=12, ge=1, le=20, strict=True, exclude=True)
     memory_context_chars: int = Field(default=8000, ge=500, le=16000, strict=True)
     evaluation_trading_days: int = Field(default=5, ge=1, le=252, strict=True)
     benchmark: str = "SPY"

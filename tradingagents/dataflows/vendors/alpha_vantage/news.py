@@ -33,7 +33,10 @@ def get_news(ticker, start_date, end_date) -> dict[str, str] | str:
     return _make_api_request("NEWS_SENTIMENT", params)
 
 
-def get_global_news(as_of_date, look_back_days: int | None = None, limit: int | None = None) -> dict[str, str] | str:
+def get_global_news(
+    as_of_date, look_back_days: int | None = None, limit: int | None = None, *,
+    sector_query: str | None = None,
+) -> dict[str, str] | str:
     """Returns global market news & sentiment data without ticker-specific filtering.
 
     Covers broad market topics like financial markets, economy, and more.
@@ -60,6 +63,7 @@ def get_global_news(as_of_date, look_back_days: int | None = None, limit: int | 
     start_dt = curr_dt - timedelta(days=look_back_days)
     start_date = start_dt.strftime("%Y-%m-%d")
 
+    # NEWS_SENTIMENT supports its own topic categories rather than free text.
     params = {
         "topics": "financial_markets,economy_macro,economy_monetary",
         "time_from": format_datetime_for_api(start_date),

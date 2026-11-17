@@ -19,7 +19,6 @@ _ENV_OVERRIDES = {
     "TRADINGAGENTS_OUTPUT_LANGUAGE":      "output_language",
     "TRADINGAGENTS_MAX_DEBATE_ROUNDS":    "max_debate_rounds",
     "TRADINGAGENTS_MAX_RISK_ROUNDS":      "max_risk_discuss_rounds",
-    "TRADINGAGENTS_MAX_TOOL_ROUNDS":      "max_tool_rounds",
     "TRADINGAGENTS_CHECKPOINT_ENABLED":   "checkpoint_enabled",
     "TRADINGAGENTS_BENCHMARK_TICKER":     "benchmark_ticker",
     "TRADINGAGENTS_TEMPERATURE":          "temperature",
@@ -133,8 +132,6 @@ def build_default_config() -> dict:
         "max_debate_rounds": 1,
         "max_risk_discuss_rounds": 1,
         "max_recur_limit": 100,
-        # Rounds of tool calls an analyst may make before it is asked for its report.
-        "max_tool_rounds": 10,
         # News / data fetching parameters
         # Increase for longer lookback strategies or to broaden macro coverage;
         # decrease to reduce token usage in agent prompts.
@@ -163,7 +160,6 @@ def build_default_config() -> dict:
         "fundamental_data": "sec_edgar,yfinance",  # Options: sec_edgar, alpha_vantage, yfinance
             "news_data": "yfinance",             # Options: alpha_vantage, yfinance
             "macro_data": "fred",                # Options: fred (needs FRED_API_KEY)
-            "prediction_markets": "polymarket",  # Options: polymarket (keyless)
         },
         # Tool-level configuration (takes precedence over category-level)
         "tool_vendors": {

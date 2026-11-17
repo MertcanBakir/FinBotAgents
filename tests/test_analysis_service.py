@@ -161,6 +161,8 @@ def test_server_config_is_bounded_and_deeply_isolated(
     assert a["backend_url"] is a["memory_log_path"] is None
     assert a["checkpoint_enabled"] is False
     assert a["results_dir"] != b["results_dir"]
+    assert a["data_cache_dir"] != b["data_cache_dir"]
+    assert a["fred_cache_dir"] == b["fred_cache_dir"] == DEFAULT_CONFIG["data_cache_dir"]
 
 
 def test_server_settings_reject_secret_endpoint_and_unbounded_retries(settings):
