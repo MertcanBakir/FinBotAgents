@@ -58,7 +58,7 @@ Repository variables:
 | `PRODUCTION_DEPLOY_ENABLED` | **`false` until the first live deployment is approved** |
 
 The immutable OIDC subject prefix in the template is specific to
-`MertcanBakir/TradingAgents` (owner ID `151876718`, repository ID `1436778428`).
+`MertcanBakir/FinBotAgents` (owner ID `151876718`, repository ID `1461057831`).
 Repository rename/transfer or custom OIDC subjects require reviewing this trust
 policy. Do not substitute a wildcard subject to work around authentication errors.
 

@@ -4,7 +4,7 @@
   "Parameters": {
     "OidcSubjectPrefix": {
       "Type": "String",
-      "Default": "repo:MertcanBakir@151876718/TradingAgents@1436778428",
+      "Default": "repo:MertcanBakir@151876718/FinBotAgents@1461057831",
       "Description": "Verified immutable subject prefix of this GitHub repository."
     }
   },
