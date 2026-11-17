@@ -20,9 +20,6 @@ from tradingagents.dataflows.vendors.alpha_vantage import (
 )
 from tradingagents.dataflows.vendors.fmp import get_industry_pe as get_fmp_industry_pe
 from tradingagents.dataflows.vendors.fred import get_macro_data as get_fred_macro_data
-from tradingagents.dataflows.vendors.polymarket import (
-    get_prediction_markets as get_polymarket_prediction_markets,
-)
 from tradingagents.dataflows.vendors.sec_edgar import (
     get_balance_sheet as get_sec_edgar_balance_sheet,
     get_cashflow as get_sec_edgar_cashflow,
@@ -96,20 +93,10 @@ TOOLS_CATEGORIES = {
             "get_macro_indicators",
         ]
     },
-    "prediction_markets": {
-        "description": "Market-implied probabilities for forward-looking events",
-        "tools": [
-            "get_prediction_markets",
-        ]
-    }
 }
 
-# Optional enrichment categories. These add macro/event context to the news
-# analyst but are not core to a decision, so a vendor failure here degrades to a
-# sentinel instead of aborting the run (a bad LLM-supplied indicator, a missing
-# key, or a network blip should not crash an analysis over flavour data). Core
-# categories (prices, fundamentals, news) still raise so a broken primary is loud.
-OPTIONAL_CATEGORIES = {"macro_data", "prediction_markets"}
+# Missing macro data can be reported to the analyst without aborting the run.
+OPTIONAL_CATEGORIES = {"macro_data"}
 
 # Mapping of methods to their vendor-specific implementations
 VENDOR_METHODS = {
@@ -165,10 +152,6 @@ VENDOR_METHODS = {
     # macro_data
     "get_macro_indicators": {
         "fred": get_fred_macro_data,
-    },
-    # prediction_markets
-    "get_prediction_markets": {
-        "polymarket": get_polymarket_prediction_markets,
     },
 }
 

@@ -1,6 +1,6 @@
 """The whole graph, end to end, with scripted models and no network.
 
-Every tool-using analyst calls each of its tools once through the vendor router,
+Analysts fetch their inputs through the vendor router,
 the debates and managers run, and the decision is parsed and logged. This pins
 the wiring: a restructure that drops a node, a tool or an edge fails here.
 """
@@ -13,7 +13,7 @@ import time
 import pandas as pd
 import pytest
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.runnables import RunnableLambda
 from pydantic import Field
@@ -43,15 +43,10 @@ STRUCTURED = {
         overall_band=schemas.SentimentBand.NEUTRAL, overall_score=5.0, confidence="low", narrative="n"),
 }
 
-ARGS = {"symbol": "NVDA", "ticker": "NVDA", "curr_date": TRADE_DATE, "start_date": "2026-01-02",
-        "end_date": TRADE_DATE, "indicator": "rsi", "topic": "Fed rate cut", "freq": "quarterly"}
-
-
 class ScriptedModel(BaseChatModel):
-    """Calls every bound tool once, then answers with TEXT."""
+    """Answers with canned text or supported structured output."""
 
     structured: bool = False
-    tools: tuple = ()
     calls: list = Field(default_factory=list)   # shared across bound copies
     threads: set = Field(default_factory=set)   # threads that served News or Fundamentals
     fail_at: int | None = None                  # raise on this call, once
@@ -59,9 +54,6 @@ class ScriptedModel(BaseChatModel):
     @property
     def _llm_type(self) -> str:
         return "scripted"
-
-    def bind_tools(self, tools, **kwargs):
-        return self.model_copy(update={"tools": tuple(tools)})
 
     def with_structured_output(self, schema, **kwargs):
         if not self.structured:
@@ -75,18 +67,12 @@ class ScriptedModel(BaseChatModel):
 
     def _generate(self, messages, stop=None, run_manager=None, **kwargs) -> ChatResult:
         self._count()
-        if self.tools or str(messages[0].content).startswith("You are the Fundamentals Analyst."):
+        if str(messages[0].content).startswith(("You are the Fundamentals Analyst.", "You are the News Analyst.")):
             import threading
             import time
             self.threads.add(threading.current_thread().name)
             time.sleep(0.05)   # long enough for concurrent analysts to overlap
-        if self.tools and not isinstance(messages[-1], ToolMessage):
-            calls = [{"name": t.name, "id": f"call_{i}",
-                      "args": {k: v for k, v in ARGS.items()
-                               if k in t.tool_call_schema.model_json_schema()["properties"]}}
-                     for i, t in enumerate(self.tools)]
-            message = AIMessage(content="", tool_calls=calls)
-        elif "Return only a JSON object" in str(messages[0].content):
+        if "Return only a JSON object" in str(messages[0].content):
             message = AIMessage(content='{"groups": ["rsi", "invalid-code"]}')
         else:
             message = AIMessage(content=TEXT)
@@ -197,7 +183,7 @@ def test_a_full_run_reaches_a_logged_decision(tmp_path, monkeypatch, offline, st
                 "investment_plan", "trader_investment_plan", "final_trade_decision"):
         assert state[key].strip(), key
     tool_methods = {"get_news", "get_global_news",
-                    "get_macro_indicators", "get_prediction_markets", "get_fundamentals",
+                    "get_macro_indicators", "get_fundamentals",
                     "get_balance_sheet", "get_cashflow", "get_income_statement",
                     "get_insider_transactions", "get_estimate_revisions", "get_upcoming_earnings",
                     "get_company_guidance", "get_analyst_price_targets", "get_industry_pe",
@@ -208,7 +194,7 @@ def test_a_full_run_reaches_a_logged_decision(tmp_path, monkeypatch, offline, st
 
 @pytest.mark.unit
 def test_an_interrupted_run_resumes_from_its_checkpoint(tmp_path, monkeypatch, offline):
-    model = ScriptedModel(fail_at=12)            # past the analysts, before the decision
+    model = ScriptedModel(fail_at=11)            # past the analysts, before the decision
     graph = _graph(tmp_path, monkeypatch, model, checkpoint_enabled=True)
     with pytest.raises(RuntimeError, match="provider unavailable"):
         graph.propagate("NVDA", TRADE_DATE)
@@ -250,7 +236,7 @@ def test_the_analysts_run_at_the_same_time(tmp_path, monkeypatch, offline):
 
 @pytest.mark.unit
 def test_a_debug_run_prints_the_analysts_work_and_reaches_the_same_decision(tmp_path, monkeypatch, offline, capsys):
-    """Debug mode streams the analysts' own graphs, so their tool calls still print."""
+    """Debug mode prints analyst reports after their data has been collected."""
     graph = _graph(tmp_path, monkeypatch, ScriptedModel(), debug=True)
 
     state, signal = graph.propagate("NVDA", TRADE_DATE)
@@ -258,7 +244,7 @@ def test_a_debug_run_prints_the_analysts_work_and_reaches_the_same_decision(tmp_
     assert signal == "Overweight"
     assert state["market_report"].strip() and state["fundamentals_report"].strip()
     printed = capsys.readouterr().out
-    assert "get_news" in printed
+    assert TEXT in printed
 
 
 @pytest.mark.unit
@@ -293,69 +279,6 @@ def test_a_streamed_run_reads_its_own_graph_config(tmp_path, monkeypatch, offlin
 
     assert seen and set(seen) == {"French"}
     assert set(between) == {"German"}
-
-
-class LoopingModel(ScriptedModel):
-    """Calls a tool on every turn it is offered one (#1420)."""
-
-    tool_turns: list = Field(default_factory=list)    # shared across bound copies
-    last_turns: list = Field(default_factory=list)    # histories of the turns offered no tools
-
-    def _generate(self, messages, stop=None, run_manager=None, **kwargs) -> ChatResult:
-        if not self.tools:
-            self.last_turns.append(messages)
-            return super()._generate(messages, stop, run_manager, **kwargs)
-        self.tool_turns.append(1)
-        tool = self.tools[0]
-        call = {"name": tool.name, "id": f"call_{len(self.tool_turns)}",
-                "args": {k: v for k, v in ARGS.items()
-                         if k in tool.tool_call_schema.model_json_schema()["properties"]}}
-        return ChatResult(generations=[ChatGeneration(message=AIMessage(content="", tool_calls=[call]))])
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("round_limit", [None, 3], ids=["configured-default", "3-rounds"])
-def test_an_analyst_that_keeps_calling_tools_writes_its_report_at_the_limit(tmp_path, monkeypatch, offline, round_limit):
-    """A model that does not stop calling tools must not end the run (#1420)."""
-    model = LoopingModel(structured=True)
-    config = {} if round_limit is None else {"max_tool_rounds": round_limit}
-    graph = _graph(tmp_path, monkeypatch, model, **config)
-
-    final_state, rating = graph.propagate("NVDA", TRADE_DATE)
-
-    assert len(model.tool_turns) == graph.config["max_tool_rounds"]
-    assert "\n\nReport.\n\n### SciPy support and resistance zones" in final_state["market_report"]
-    assert "**Rating**:" not in final_state["market_report"]
-    assert "FINAL TRANSACTION PROPOSAL" not in final_state["market_report"]
-    assert any(
-        label in final_state["market_report"] for label in ("**Candle status:**", "**Mum durumu:**")
-    )
-    for key in ("news_report", "fundamentals_report"):
-        assert final_state[key] == TEXT
-    assert rating == "Overweight"
-
-
-@pytest.mark.unit
-def test_the_last_turn_is_offered_no_tools_and_reads_its_tool_results_as_text(tmp_path, monkeypatch, offline):
-    """Offered tools, a model may call one whatever it is told; a history holding
-    tool calls may be refused by a provider when no tools are bound."""
-    model = LoopingModel(structured=True)
-    graph = _graph(tmp_path, monkeypatch, model, max_tool_rounds=2)
-
-    graph.propagate("NVDA", TRADE_DATE)
-
-    wrap_ups = [h for h in model.last_turns if isinstance(h[-1], HumanMessage) and "tool round" in h[-1].content]
-    assert len(wrap_ups) == 1
-    for history in wrap_ups:
-        assert not any(isinstance(m, ToolMessage) or getattr(m, "tool_calls", None) for m in history)
-        assert any("returned]" in str(m.content) for m in history)
-        assert "tool rounds are spent" in history[0].content   # the system prompt lists no tools
-
-
-@pytest.mark.unit
-def test_a_tool_limit_the_recursion_limit_cannot_hold_is_refused(tmp_path, monkeypatch):
-    with pytest.raises(ValueError, match="max_tool_rounds"):
-        _graph(tmp_path, monkeypatch, ScriptedModel(), max_tool_rounds=60, max_recur_limit=100)
 
 
 class TimedModel(ScriptedModel):
@@ -541,7 +464,6 @@ def test_agent_stats_cover_parallel_nodes_tools_and_reset(tmp_path, monkeypatch,
         "get_income_statement": 1,
         "get_balance_sheet": 1,
         "get_cashflow": 1,
-        "get_insider_transactions": 1,
         "get_estimate_revisions": 1,
         "get_upcoming_earnings": 1,
         "get_company_guidance": 1,
@@ -549,6 +471,15 @@ def test_agent_stats_cover_parallel_nodes_tools_and_reset(tmp_path, monkeypatch,
         "get_industry_pe": 1,
         "get_company_pe_history": 1,
     }
+    news = rows["News Analyst"]
+    assert news["llm_calls"] == 1
+    assert news["tools"] == {}
+    assert news["data_accesses"] == {
+        "get_news": 1, "get_global_news": 1, "get_insider_transactions": 1,
+        "get_macro_indicators": 6,
+    }
+    assert news["data_outcomes"]["FRED cpi"] == "received"
+    assert len(news["data_outcomes"]) == 9
     assert rows["Bull Researcher"]["llm_calls"] == 1
     # Reusing a graph must not carry measurements from the previous run.
     again, _ = graph.propagate("NVDA", TRADE_DATE)

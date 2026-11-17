@@ -96,23 +96,14 @@ class TradingAgentsGraph:
             max_debate_rounds=self.config["max_debate_rounds"],
             max_risk_discuss_rounds=self.config["max_risk_discuss_rounds"],
         )
-        # An analyst takes two graph steps per tool round, plus its first turn
-        # and its wrap-up; a limit past the recursion limit would end the run
-        # there instead.
-        max_tool_rounds, max_recur_limit = self.config["max_tool_rounds"], self.config["max_recur_limit"]
-        if 2 * max_tool_rounds + 2 >= max_recur_limit:
-            raise ValueError(
-                f"max_tool_rounds={max_tool_rounds} needs max_recur_limit above {2 * max_tool_rounds + 2}"
-            )
         self.graph_setup = GraphSetup(
             self.quick_thinking_llm,
             self.deep_thinking_llm,
             self.conditional_logic,
-            max_tool_rounds,
         )
 
         self.propagator = Propagator(
-            max_recur_limit=max_recur_limit,
+            max_recur_limit=self.config["max_recur_limit"],
         )
         self.reflector = Reflector(self.quick_thinking_llm)
 
@@ -171,6 +162,7 @@ class TradingAgentsGraph:
             # another has pending nodes this graph no longer has, and one saved
             # before the Memory Log step would resume without the lessons.
             "analysts=parallel",
+            "news=prefetched",
             "memory=parallel",
             f"settings={digest}",
         ])

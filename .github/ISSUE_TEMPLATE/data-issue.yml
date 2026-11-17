@@ -32,7 +32,6 @@ body:
         - Social (StockTwits, Reddit)
         - Macro (FRED)
         - Insider transactions
-        - Prediction markets
         - Company identity (wrong company or name)
     validations:
       required: true

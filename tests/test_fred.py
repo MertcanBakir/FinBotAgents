@@ -4,7 +4,10 @@ missing-value handling, lookahead-safe windowing, and router integration.
 All API access is mocked, so these run without a network connection or a key.
 """
 import copy
+import os
+import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from unittest import mock
 
 import pytest
@@ -46,6 +49,65 @@ def _request_stub(meta=_META, obs=_OBS):
             return obs
         raise AssertionError(f"unexpected FRED path: {path}")
     return _impl
+
+
+@pytest.fixture(autouse=True)
+def _isolated_fred_cache(tmp_path, monkeypatch):
+    monkeypatch.setattr(fred, "get_config", lambda: {"data_cache_dir": str(tmp_path)})
+
+
+@pytest.mark.unit
+def test_fred_cache_reuses_aliases_and_refreshes_after_expiry(tmp_path, monkeypatch):
+    request = mock.Mock(side_effect=_request_stub())
+    monkeypatch.setattr(fred, "_request", request)
+    initial = fred.get_macro_data("unemployment", "2025-09-30")
+    assert fred.get_macro_data("UNRATE", "2025-09-30", 365) == initial
+    assert request.call_count == 2
+
+    cache_file, = (tmp_path / "fred").glob("*.json")
+    expiry = time.time() - fred._CACHE_TTL_SECONDS - 1
+    os.utime(cache_file, (expiry, expiry))
+
+    assert fred.get_macro_data("UNRATE", "2025-09-30") == initial
+    fred.get_macro_data("UNRATE", "2025-09-30", 30)
+    fred.get_macro_data("UNRATE", "2025-10-01")
+    fred.get_macro_data("CPIAUCSL", "2025-09-30")
+    assert request.call_count == 10
+
+
+@pytest.mark.unit
+def test_fred_cache_keys_live_clamp_by_vintage(monkeypatch):
+    request = mock.Mock(side_effect=_request_stub())
+    monkeypatch.setattr(fred, "_request", request)
+    monkeypatch.setattr(fred, "_fred_today", lambda: "2025-09-29")
+    fred.get_macro_data("UNRATE", "2025-09-30")
+    monkeypatch.setattr(fred, "_fred_today", lambda: "2025-09-30")
+    fred.get_macro_data("UNRATE", "2025-09-30")
+    assert request.call_count == 4
+
+
+@pytest.mark.unit
+def test_fred_cache_retries_unavailable_and_empty_results(tmp_path, monkeypatch):
+    request = mock.Mock(side_effect=[
+        requests.Timeout("test"), _META, {"observations": []}, _META, _OBS,
+    ])
+    monkeypatch.setattr(fred, "_request", request)
+    with pytest.raises(requests.Timeout):
+        fred.get_macro_data("UNRATE", "2025-09-30")
+    assert "No observations" in fred.get_macro_data("UNRATE", "2025-09-30")
+    assert not list((tmp_path / "fred").glob("*.json"))
+    assert "**Latest:**" in fred.get_macro_data("UNRATE", "2025-09-30")
+    assert request.call_count == 5
+
+
+@pytest.mark.unit
+def test_fred_cache_coalesces_concurrent_identical_queries(monkeypatch):
+    request = mock.Mock(side_effect=_request_stub())
+    monkeypatch.setattr(fred, "_request", request)
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        results = list(pool.map(lambda _: fred.get_macro_data("UNRATE", "2025-09-30"), range(3)))
+    assert len(set(results)) == 1
+    assert request.call_count == 2
 
 
 @pytest.mark.unit

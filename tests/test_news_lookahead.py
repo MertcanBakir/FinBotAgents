@@ -417,3 +417,44 @@ def test_one_malformed_article_does_not_lose_the_feed(monkeypatch):
     _ticker_with([good, bad], monkeypatch)
     out = ynews.get_news_yfinance("ZS", "2026-09-20", "2026-09-23")
     assert "Kept" in out and "Also kept" in out
+
+
+@pytest.mark.unit
+def test_failed_ticker_feed_uses_tagged_search_results(monkeypatch):
+    from yfinance.exceptions import YFDataException
+
+    today = datetime.now(UTC).date().isoformat()
+    searched = _ticker_with([], monkeypatch, search_news=[_tagged("NVDA story", today, "NVDA")])
+
+    def fail(*args, **kwargs):
+        raise YFDataException("Ticker endpoint unavailable")
+
+    monkeypatch.setattr(ynews.yf.Ticker, "get_news", fail)
+
+    report = ynews.get_news_yfinance("NVDA", today, today)
+
+    assert searched == ["NVDA"]
+    assert "NVDA story" in report
+    assert f"published {today} 00:00 UTC" in report
+
+
+@pytest.mark.unit
+def test_macro_news_reserves_space_for_later_topics(monkeypatch):
+    today = datetime.now(UTC).date().isoformat()
+    queried = []
+
+    class Search:
+        def __init__(self, query, **kwargs):
+            queried.append(query)
+            self.news = [_tagged(f"{query} story {index}", today) for index in range(3)]
+
+    monkeypatch.setattr(ynews.yf, "Search", Search)
+    monkeypatch.setattr(ynews, "get_config", lambda: {
+        "global_news_queries": ["Fed", "Energy"],
+    })
+
+    report = ynews.get_global_news_yfinance(today, 30, 3, sector_query="Semiconductors")
+
+    assert queried == ["Semiconductors", "Fed", "Energy"]
+    assert "Semiconductors story 0" in report and "Fed story 0" in report and "Energy story 0" in report
+    assert report.count("### ") == 3

@@ -10,7 +10,6 @@ sends, not merely that the constant is referenced in the module.
 """
 from __future__ import annotations
 
-import inspect
 from unittest.mock import MagicMock
 
 import pytest
@@ -159,7 +158,6 @@ def test_fundamentals_prefetches_all_sources_once_and_writes_one_report(monkeypa
         ("get_income_statement", (ticker, "quarterly", date)),
         ("get_balance_sheet", (ticker, "quarterly", date)),
         ("get_cashflow", (ticker, "quarterly", date)),
-        ("get_insider_transactions", (ticker, date)),
         ("get_estimate_revisions", (ticker, date)),
         ("get_upcoming_earnings", (ticker, date)),
         ("get_company_guidance", (ticker, date)),
@@ -173,18 +171,6 @@ def test_fundamentals_prefetches_all_sources_once_and_writes_one_report(monkeypa
         calls.append((method, args))
         if method == "get_balance_sheet":
             raise RuntimeError("vendor failed")
-        if method == "get_insider_transactions":
-            return (
-                "# Insider Transactions data for NVDA\n"
-                "Start Date,Text,Transaction,Insider,Shares\n"
-                "2025-01-15,Sale at price 100 per share.,,Boundary Seller,123\n"
-                "2025-01-14,Sale at price 100 per share.,,Old Seller,456\n"
-                "2026-01-15,Sale at price 100 per share.,,Latest Seller,789\n"
-                "2026-01-16,Sale at price 100 per share.,,Future Seller,456\n"
-                "2026-01-14,Stock Gift at price 0 per share.,,Donor,456\n"
-                "2026-01-14,Purchase at price 100 per share.,,Buyer,456\n"
-                "2026-01-14,Stock Award(Grant) at price 0 per share.,,Recipient,456\n"
-            )
         if method == "get_fundamentals":
             return "PE Ratio (TTM): 21.01\nForward PE: 10.49"
         if method == "get_industry_pe":
@@ -219,12 +205,12 @@ def test_fundamentals_prefetches_all_sources_once_and_writes_one_report(monkeypa
     llm.bind_tools.assert_not_called()
     system, data = llm.invoke.call_args.args[0]
     assert NO_EXTERNAL_TOOLS in system.content
-    assert "eight level-three headings" in system.content
+    assert "seven level-three headings" in system.content
     assert "Turkish" in system.content
     assert date in data.content and ticker in data.content
     for method, _ in expected:
         if method in {"get_fundamentals", "get_estimate_revisions", "get_company_guidance", "get_upcoming_earnings",
-                      "get_industry_pe", "get_company_pe_history", "get_insider_transactions"}:
+                      "get_industry_pe", "get_company_pe_history"}:
             continue
         body = ("Data could not be retrieved." if method == "get_balance_sheet"
                 else f"{method} first row\n{method} last row")
@@ -232,10 +218,7 @@ def test_fundamentals_prefetches_all_sources_once_and_writes_one_report(monkeypa
     assert "### get_estimate_revisions\n" in data.content
     assert "### get_upcoming_earnings_and_guidance\n" in data.content
     assert "### get_valuation_benchmarks\n" in data.content
-    assert "Insider Sales in the Last Year" in system.content
-    assert "Reported insider sales, 2025-01-15 to 2026-01-15 (inclusive)" in data.content
-    assert "Boundary Seller" in data.content and "Latest Seller" in data.content
-    assert not any(name in data.content for name in ("Old Seller", "Future Seller", "Donor", "Buyer", "Recipient"))
+    assert "Insider Sales in the Last Year" not in system.content
     assert "PE Ratio (TTM): 21.01" in data.content
     assert '"company_vs_peer_median_pct": -54.85' in data.content
     assert '"company_vs_history_mean_pct": -55.08' in data.content
@@ -256,8 +239,8 @@ def test_fundamentals_prefetches_all_sources_once_and_writes_one_report(monkeypa
     ),
     ("DATA_UNAVAILABLE: provider unavailable", "DATA_UNAVAILABLE: provider unavailable"),
 ])
-def test_fundamentals_insider_sales_distinguishes_empty_and_unavailable(source, expected):
-    from tradingagents.agents.analysts.fundamentals_analyst import _insider_sales
+def test_news_insider_sales_distinguishes_empty_and_unavailable(source, expected):
+    from tradingagents.agents.analysts.news_analyst import _insider_sales
 
     assert _insider_sales(source, "2026-01-15").endswith(expected)
 
@@ -295,13 +278,6 @@ def test_fundamentals_limits_sec_statement_history_by_horizon(monkeypatch, horiz
     assert evidence.content.count("2025-07-27 (6 months),30") == (3 if keeps_year_ago else 0)
     assert evidence.content.count("2025-06-26,20") == (3 if keeps_year_ago else 0)
     assert "2025-06-25,10" not in evidence.content
-
-
-@pytest.mark.unit
-def test_news_analyst_keeps_its_tool_date_guidance():
-    import tradingagents.agents.analysts.news_analyst as news
-
-    assert "tool-call date ranges" in inspect.getsource(news)
 
 
 @pytest.mark.unit

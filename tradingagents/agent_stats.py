@@ -45,6 +45,7 @@ class AgentRunStats(BaseModel):
     errors: int = Field(default=0, ge=0)
     tools: dict[str, int] = Field(default_factory=dict)
     data_accesses: dict[str, int] = Field(default_factory=dict)
+    data_outcomes: dict[str, Literal["received", "empty", "unavailable", "skipped"]] = Field(default_factory=dict)
 
 
 class AgentStats(AgentRunStats):
@@ -87,6 +88,7 @@ class AgentStatsHandler(BaseCallbackHandler):
                     "errors": 0,
                     "tools": Counter(),
                     "data_accesses": Counter(),
+                    "data_outcomes": {},
                 }
             self._owners[run_id] = owner
 
@@ -177,6 +179,12 @@ class AgentStatsHandler(BaseCallbackHandler):
                 self._runs[owner]["data_accesses"][name] += 1
                 self._runs[owner]["errors"] += int(failed)
 
+    def data_outcome(self, parent_run_id, source, status):
+        with self._lock:
+            owner = self._owners.get(parent_run_id)
+            if owner is not None:
+                self._runs[owner]["data_outcomes"][source] = status
+
     def snapshot(self):
         with self._lock:
             grouped = {}
@@ -197,6 +205,7 @@ class AgentStatsHandler(BaseCallbackHandler):
                     duration_seconds=max(0, (row["ended"] or now) - row["started"]),
                     tools=dict(row["tools"]),
                     data_accesses=dict(row["data_accesses"]),
+                    data_outcomes=dict(row["data_outcomes"]),
                 )
                 grouped.setdefault(row["agent"], []).append(AgentRunStats(**values))
             result = []
@@ -217,6 +226,7 @@ class AgentStatsHandler(BaseCallbackHandler):
                     for r in runs:
                         counter.update(getattr(r, key))
                     totals[key] = dict(counter)
+                totals["data_outcomes"] = runs[-1].data_outcomes
                 status = (
                     "error"
                     if any(r.status == "error" for r in runs)
@@ -230,6 +240,18 @@ class AgentStatsHandler(BaseCallbackHandler):
                     )
                 )
             return result
+
+
+def record_data_outcome(source, status):
+    from langgraph.config import get_config
+
+    try:
+        callbacks = get_config().get("callbacks")
+    except RuntimeError:
+        return
+    for handler in getattr(callbacks, "handlers", ()):
+        if isinstance(handler, AgentStatsHandler):
+            handler.data_outcome(callbacks.parent_run_id, source, status)
 
 
 def track_data(name):
@@ -298,6 +320,15 @@ def render_agent_stats(rows, language="en"):
                 + (", ".join(f"{k} ×{v}" for k, v in sorted(row[key].items())) or "—")
             )
         lines.append(f"- {'Hatalar' if tr else 'Errors'}: {row['errors']}")
+        if outcomes := row.get("data_outcomes"):
+            statuses = {
+                "received": "alındı" if tr else "received",
+                "empty": "veri yok" if tr else "no usable records",
+                "unavailable": "erişilemedi" if tr else "unavailable",
+                "skipped": "atlandı" if tr else "skipped",
+            }
+            details = ", ".join(f"{source} ({statuses[status]})" for source, status in outcomes.items())
+            lines.append(f"- {'Kaynak durumu' if tr else 'Source outcomes'}: {details}")
         if len(row.get("runs", ())) > 1:
             for i, run in enumerate(row["runs"], 1):
                 lines.append(

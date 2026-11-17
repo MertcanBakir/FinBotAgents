@@ -34,7 +34,6 @@ def build_graph_config(request: AnalysisRequest, settings: ServiceSettings, work
         deep_think_backend_url=None,
         max_debate_rounds=1,
         max_risk_discuss_rounds=1,
-        max_tool_rounds=settings.max_tool_rounds,
         max_recur_limit=100,
         llm_max_retries=settings.llm_max_retries,
         max_tokens=None,
@@ -45,6 +44,9 @@ def build_graph_config(request: AnalysisRequest, settings: ServiceSettings, work
         checkpoint_enabled=False,
         memory_log_path=None,
         results_dir=str(workdir / "results"),
+        # FRED observations are public and independent of the user or ticker.
+        # Keep them across jobs while the other caches stay in the job directory.
+        fred_cache_dir=config["data_cache_dir"],
         data_cache_dir=str(workdir / "cache"),
         analysis_horizon=request.analysis_horizon,
         output_language={"tr": "Turkish", "en": "English"}[request.language],
