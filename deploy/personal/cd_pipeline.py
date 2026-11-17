@@ -12,7 +12,7 @@ import tarfile
 import urllib.request
 from pathlib import Path
 
-REPOSITORY = "MertcanBakir/TradingAgents"
+REPOSITORY = "MertcanBakir/FinBotAgents"
 REGISTRY = "500888846202.dkr.ecr.eu-west-1.amazonaws.com"
 ECR_REPOSITORY = "lucrari/tradingagents-personal"
 REGION = "eu-west-1"
