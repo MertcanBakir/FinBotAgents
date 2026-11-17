@@ -50,8 +50,8 @@ def test_known_providers_resolve(provider, env_var):
     assert get_api_key_env(provider) == env_var
 
 
-def test_custom_endpoint_has_no_key():
-    assert get_api_key_env("openai_compatible") is None
+def test_custom_endpoint_has_optional_key_env():
+    assert get_api_key_env("openai_compatible") == "OPENAI_COMPATIBLE_API_KEY"
 
 
 def test_unknown_provider_returns_none():
