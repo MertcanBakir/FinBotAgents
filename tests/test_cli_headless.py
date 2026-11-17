@@ -56,7 +56,6 @@ def test_flags_skip_exactly_their_own_steps(monkeypatch):
 
     for step in ("get_ticker", "get_analysis_date", "get_analysis_horizon", "select_analysts"):
         monkeypatch.setattr(selections, step, no_prompt)
-    monkeypatch.setattr(selections.updates, "enabled", lambda: False)
 
     chosen = selections._prompt_selections({}, FLAGS)
 
@@ -187,7 +186,6 @@ def test_an_unknown_analyst_error_names_the_analysts_as_users_know_them():
 def _selections_with_env(monkeypatch, keys=None):
     for name, value in UNATTENDED_ENV.items():
         monkeypatch.setenv(name, value)
-    monkeypatch.setattr(selections.updates, "enabled", lambda: False)
     checked = keys if keys is not None else []
     monkeypatch.setattr(selections, "ensure_api_key", lambda provider: checked.append(provider))
     return checked
@@ -338,15 +336,15 @@ def test_the_html_flag_reaches_the_run(monkeypatch, args, expected):
 
 @pytest.mark.unit
 def test_only_the_providers_the_tiers_use_need_a_key(monkeypatch):
-    """Both tiers on a local Ollama: the main provider's key is not needed."""
+    """Both tiers on a secondary provider: the main provider's key is not needed."""
     checked = _selections_with_env(monkeypatch)
     for tier in ("quick", "deep"):
-        monkeypatch.setitem(selections.DEFAULT_CONFIG, f"{tier}_think_provider", "ollama")
-        monkeypatch.setenv(f"TRADINGAGENTS_{tier.upper()}_THINK_LLM", "llama3.1")
+        monkeypatch.setitem(selections.DEFAULT_CONFIG, f"{tier}_think_provider", "anthropic")
+        monkeypatch.setenv(f"TRADINGAGENTS_{tier.upper()}_THINK_LLM", "claude-test")
 
     selections._prompt_selections({}, FLAGS)
 
-    assert checked == ["ollama"]
+    assert checked == ["anthropic"]
 
 
 @pytest.mark.unit

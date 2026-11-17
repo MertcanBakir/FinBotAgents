@@ -46,7 +46,7 @@ providers they choose; one connection may serve both tiers.
 Models remain subject to the user's provider account access and API billing.
 This release does not query a per-user model catalog or permit arbitrary model
 IDs/endpoints from the request. A server model allowlist is not proof of account
-entitlement. Ollama, Azure, Bedrock and arbitrary OpenAI-compatible endpoints are
+entitlement. Azure, Bedrock and arbitrary OpenAI-compatible endpoints are
 outside this credential contract.
 
 ## Create, list, verify, remove a connection

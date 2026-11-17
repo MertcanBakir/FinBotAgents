@@ -26,11 +26,6 @@ class TestProviderDefaultUrl(unittest.TestCase):
         from cli.prompts import provider_default_url
         self.assertIsNone(provider_default_url("not-a-provider"))
 
-    def test_ollama_honors_base_url_env(self):
-        from cli.prompts import provider_default_url
-        with mock.patch.dict(os.environ, {"OLLAMA_BASE_URL": "http://host:1234/v1"}):
-            self.assertEqual(provider_default_url("ollama"), "http://host:1234/v1")
-
 
 @pytest.mark.unit
 class TestCliSkipsPromptsFromEnv(unittest.TestCase):
@@ -54,7 +49,6 @@ class TestCliSkipsPromptsFromEnv(unittest.TestCase):
 
         with mock.patch.dict(os.environ, env, clear=False), \
              mock.patch.object(cli_selections, "DEFAULT_CONFIG", fake_cfg), \
-             mock.patch.object(cli_selections.updates, "enabled", return_value=False), \
              mock.patch.object(cli_selections, "get_ticker", return_value="AAPL"), \
              mock.patch.object(cli_selections, "get_analysis_date", return_value="2026-05-29"), \
              mock.patch.object(cli_selections, "get_analysis_horizon", return_value="medium_3m"), \
@@ -96,7 +90,6 @@ class TestResearchDepthSkippedFromEnv(unittest.TestCase):
 
         with mock.patch.dict(os.environ, env, clear=False), \
              mock.patch.object(cli_selections, "DEFAULT_CONFIG", fake_cfg), \
-             mock.patch.object(cli_selections.updates, "enabled", return_value=False), \
              mock.patch.object(cli_selections, "get_ticker", return_value="AAPL"), \
              mock.patch.object(cli_selections, "get_analysis_date", return_value="2026-05-29"), \
              mock.patch.object(cli_selections, "get_analysis_horizon", return_value="medium_3m"), \
@@ -125,7 +118,6 @@ class TestReasoningEffortSkippedFromEnv(unittest.TestCase):
 
         with mock.patch.dict(os.environ, env, clear=False), \
              mock.patch.object(cli_selections, "DEFAULT_CONFIG", fake_cfg), \
-             mock.patch.object(cli_selections.updates, "enabled", return_value=False), \
              mock.patch.object(cli_selections, "get_ticker", return_value="AAPL"), \
              mock.patch.object(cli_selections, "get_analysis_date", return_value="2026-05-29"), \
              mock.patch.object(cli_selections, "get_analysis_horizon", return_value="medium_3m"), \

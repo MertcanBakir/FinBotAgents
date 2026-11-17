@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tradingagents"
+name = "finbotagents"
 dynamic = ["version"]
-description = "TradingAgents: Multi-Agents LLM Financial Trading Framework"
+description = "FinBotAgents: financial analysis backend for Lucrari"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -54,6 +54,7 @@ bedrock = [
 ]
 
 [project.scripts]
+finbotagents = "cli.main:app"
 tradingagents = "cli.main:app"
 tradingagents-analyze = "tradingagents.service.cli:main"
 tradingagents-backend = "tradingagents.service.backend.runtime:main"
@@ -66,7 +67,7 @@ include = ["tradingagents*", "cli*"]
 
 [tool.setuptools.package-data]
 cli = ["static/*"]
-tradingagents = ["assets/*.svg"]
+tradingagents = ["assets/*.png"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
