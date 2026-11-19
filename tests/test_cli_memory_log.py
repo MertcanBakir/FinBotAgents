@@ -183,7 +183,7 @@ def test_recording_a_run_writes_its_state_log(tmp_path):
     graph.selected_analysts = ("market",)
     graph.memory_log = TradingMemoryLog({"memory_log_path": str(tmp_path / "m.md")})
     state = {"company_of_interest": "NVDA", "trade_date": "2026-09-23", "analysis_horizon": "medium_3m", "market_report": "M",
-             "sentiment_report": "", "news_report": "", "fundamentals_report": "",
+             "macro_report": "", "news_report": "", "fundamentals_report": "",
              "investment_debate_state": {"bull_history": "", "bear_history": "", "history": "",
                                          "current_response": ""},
              "trader_investment_plan": "T", "investment_plan": "P",

@@ -30,8 +30,12 @@ services:
     environment:
       LUCRARI_BACKEND_SETTINGS_FILE: /run/private/settings.json
       LUCRARI_DISPATCHER: database
+      LUCRARI_HOST_PROC_DIR: /run/host
     volumes:
       - ${LUCRARI_PRIVATE_DIR:?Set private configuration directory}/settings.json:/run/private/settings.json:ro
+      - /proc/stat:/run/host/stat:ro
+      - /proc/meminfo:/run/host/meminfo:ro
+      - /proc/uptime:/run/host/uptime:ro
     expose: ["8000"]
   worker:
     <<: *backend

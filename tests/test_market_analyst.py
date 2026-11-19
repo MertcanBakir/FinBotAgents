@@ -38,7 +38,7 @@ def test_market_uses_one_price_load_and_two_calls_without_default_indicators(mon
         "Close": range(101, 121), "Volume": 1000,
     })
     load = Mock(return_value=_closed_rows(rows))
-    monkeypatch.setattr(market, "_load_prices", load)
+    monkeypatch.setattr(market, "load_prices", load)
     llm = Mock()
     llm.invoke.side_effect = [AIMessage(content=selection), AIMessage(content="Technical report")]
 
@@ -92,7 +92,7 @@ def test_market_reports_new_groups_from_daily_rows(monkeypatch):
         "Close": close,
         "Volume": [100] * 69 + [200],
     })
-    monkeypatch.setattr(market, "_load_prices", Mock(return_value=_closed_rows(rows)))
+    monkeypatch.setattr(market, "load_prices", Mock(return_value=_closed_rows(rows)))
     llm = Mock()
     llm.invoke.side_effect = [
         AIMessage(content='{"groups":["roc","obv"]}'),
@@ -145,7 +145,7 @@ def test_selected_horizon_controls_yahoo_and_calculations(
         "Open": close, "High": close + 2, "Low": close - 2, "Close": close, "Volume": 100,
     })
     load = Mock(return_value=_closed_rows(rows))
-    monkeypatch.setattr(market, "_load_prices", load)
+    monkeypatch.setattr(market, "load_prices", load)
     llm = Mock()
     llm.invoke.side_effect = [
         AIMessage(content='{"groups":["roc","obv","bollinger","rsi"]}'),
@@ -193,7 +193,7 @@ def test_selected_horizon_controls_yahoo_and_calculations(
 @pytest.mark.parametrize("horizon", [{}, {"analysis_horizon": "unknown"}])
 def test_market_refuses_missing_or_invalid_horizon_before_loading_data(monkeypatch, horizon):
     load = Mock()
-    monkeypatch.setattr(market, "_load_prices", load)
+    monkeypatch.setattr(market, "load_prices", load)
     llm = Mock()
     run = market.create_market_analyst(llm)
 
@@ -242,7 +242,7 @@ def test_partial_bar_is_disclosed_but_excluded_from_all_model_calculations(monke
         "session_end": "2026-11-27T18:00:00Z",
         "exchange_timezone": "America/New_York",
     }
-    monkeypatch.setattr(market, "_load_prices", Mock(return_value=rows))
+    monkeypatch.setattr(market, "load_prices", Mock(return_value=rows))
     llm = Mock()
     recap = (
         "**NVDA — analiz tarihi: 2026-11-27; değerlendirme ufku: 3 ay, yaklaşık 63 işlem günü.** "
@@ -348,7 +348,7 @@ def test_trend_comparisons_use_available_values_and_histogram_magnitude():
 )
 def test_market_reports_distinct_data_errors_without_calling_models(monkeypatch, error, explanation):
     monkeypatch.setattr(market, "get_config", lambda: {"output_language": "English"})
-    monkeypatch.setattr(market, "_load_prices", Mock(side_effect=error))
+    monkeypatch.setattr(market, "load_prices", Mock(side_effect=error))
     llm = Mock()
 
     result = market.create_market_analyst(llm)({
@@ -363,7 +363,7 @@ def test_market_reports_distinct_data_errors_without_calling_models(monkeypatch,
 def test_market_discloses_unconfirmed_candle_without_calling_models(monkeypatch):
     monkeypatch.setattr(market, "get_config", lambda: {"output_language": "Turkish"})
     rows = pd.DataFrame({"Date": [pd.Timestamp("2026-11-03")], "Close": [100.0]})
-    monkeypatch.setattr(market, "_load_prices", Mock(return_value=rows))
+    monkeypatch.setattr(market, "load_prices", Mock(return_value=rows))
     llm = Mock()
 
     result = market.create_market_analyst(llm)({
@@ -469,7 +469,7 @@ def test_misaligned_indicator_series_is_rejected_without_stopping_other_calculat
 
 def test_market_handles_a_missing_volume_column_without_losing_price_indicators(monkeypatch):
     rows = _closed_rows(_volume_rows([100.0] * 60).drop(columns="Volume"))
-    monkeypatch.setattr(market, "_load_prices", Mock(return_value=rows))
+    monkeypatch.setattr(market, "load_prices", Mock(return_value=rows))
     llm = Mock()
     llm.invoke.side_effect = [AIMessage(content='{"groups":["mfi","vwma"]}'), AIMessage(content="Technical report")]
 

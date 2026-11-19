@@ -21,7 +21,7 @@ TICKER_INPUT_EXAMPLES = "SPY, 0700.HK, BTC-USD"
 
 ANALYST_CHOICES = [
     ("Market Analyst", AnalystType.MARKET),
-    ("Sentiment Analyst", AnalystType.SOCIAL),
+    ("Macro Analyst", AnalystType.MACRO),
     ("News Analyst", AnalystType.NEWS),
     ("Fundamentals Analyst", AnalystType.FUNDAMENTALS),
 ]
@@ -101,14 +101,13 @@ def parse_analysis_date(value: str) -> str:
 
 def parse_analysts(value: str, asset_type: AssetType) -> list[AnalystType]:
     """Comma-separated analyst names, in the canonical order, checked against the asset."""
-    # "sentiment" is the name users see; the analyst's key is "social".
-    names = [{"sentiment": "social"}.get(n, n) for n in (n.strip().lower() for n in value.split(",")) if n]
+    names = [n.strip().lower() for n in value.split(",") if n.strip()]
     if not names:
         raise ValueError("name at least one analyst")
     known = {a.value: a for a in AnalystType}
     unknown = [n for n in names if n not in known]
     if unknown:
-        choices = ", ".join("sentiment" if name == "social" else name for name in known)
+        choices = ", ".join(known)
         raise ValueError(f"unknown analyst {', '.join(unknown)}; choose from {choices}")
     available = filter_analysts_for_asset_type(list(known.values()), asset_type)
     unavailable = [n for n in names if known[n] not in available]

@@ -36,6 +36,7 @@ def get_news(ticker, start_date, end_date) -> dict[str, str] | str:
 def get_global_news(
     as_of_date, look_back_days: int | None = None, limit: int | None = None, *,
     sector_query: str | None = None,
+    sector_only: bool = False,
 ) -> dict[str, str] | str:
     """Returns global market news & sentiment data without ticker-specific filtering.
 
@@ -53,6 +54,8 @@ def get_global_news(
     """
     from datetime import datetime, timedelta
 
+    if sector_only:
+        return "DATA_UNAVAILABLE: Alpha Vantage does not support the supplied free-text sector query."
     config = get_config()
     if look_back_days is None:
         look_back_days = config["global_news_lookback_days"]

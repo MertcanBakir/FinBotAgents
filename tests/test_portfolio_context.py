@@ -180,7 +180,7 @@ def test_decision_agents_see_the_portfolio(module, factory, monkeypatch):
     state = {
         "company_of_interest": "AAPL", "trade_date": "2026-08-14", "asset_type": "stock",
         "analysis_horizon": "medium_3m",
-        "instrument_context": "", "market_report": "M", "sentiment_report": "S",
+        "instrument_context": "", "market_report": "M", "macro_report": "S",
         "news_report": "N", "fundamentals_report": "F", "investment_plan": "P",
         "trader_investment_plan": "T", "past_context": "",
         "portfolio_context": "PORTFOLIO_BLOCK_MARKER",

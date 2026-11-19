@@ -38,8 +38,8 @@ class TestFlagValues:
 
     def test_analysts_are_named_and_checked_against_the_asset(self):
         assert prompts.parse_analysts(" Market, news ", AssetType.STOCK) == [AnalystType.MARKET, AnalystType.NEWS]
-        with pytest.raises(ValueError, match="market, sentiment, news, fundamentals"):
-            prompts.parse_analysts("market,macro", AssetType.STOCK)
+        with pytest.raises(ValueError, match="market, macro, news, fundamentals"):
+            prompts.parse_analysts("market,unknown", AssetType.STOCK)
         with pytest.raises(ValueError, match="crypto"):
             prompts.parse_analysts("fundamentals", AssetType.CRYPTO)
         with pytest.raises(ValueError, match="at least one"):
@@ -145,8 +145,8 @@ def test_the_command_passes_its_flags_to_the_run(monkeypatch):
 
 
 @pytest.mark.unit
-def test_sentiment_names_the_sentiment_analyst():
-    assert prompts.parse_analysts("sentiment,market", AssetType.STOCK) == [AnalystType.MARKET, AnalystType.SOCIAL]
+def test_macro_selects_the_macro_analyst():
+    assert prompts.parse_analysts("macro,market", AssetType.STOCK) == [AnalystType.MARKET, AnalystType.MACRO]
 
 
 @pytest.mark.unit
@@ -179,8 +179,8 @@ def test_rounds_from_the_environment_do_not_claim_a_depth_was_chosen(monkeypatch
 @pytest.mark.unit
 def test_an_unknown_analyst_error_names_the_analysts_as_users_know_them():
     with pytest.raises(ValueError) as caught:
-        prompts.parse_analysts("macro", AssetType.STOCK)
-    assert "sentiment" in str(caught.value) and "social" not in str(caught.value)
+        prompts.parse_analysts("social", AssetType.STOCK)
+    assert "social" in str(caught.value) and "macro" in str(caught.value)
 
 
 def _selections_with_env(monkeypatch, keys=None):

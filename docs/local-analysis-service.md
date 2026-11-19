@@ -67,7 +67,7 @@ final_rating: Buy / Overweight / Hold / Underweight / Sell / REVIEW.
 trade_action: Buy / Hold / Sell / null. Unparseable output never silently becomes
 Hold. Missing requested analyst output is not considered complete.
 
-Section codes: executive_summary, technical, fundamentals, news, sentiment, bull,
+Section codes: executive_summary, technical, fundamentals, news, macro, bull,
 bear, trade_plan, risk, final_assessment, provenance, disclaimer. Each has title,
 nullable content_markdown, and parts. Risk parts preserve aggressive/conservative/
 neutral text; trade-plan parts include research_manager. Executive summary comes

@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 AGENTS = frozenset(
     {
         "Market Analyst",
-        "Sentiment Analyst",
+        "Macro Analyst",
         "News Analyst",
         "Fundamentals Analyst",
         "Bull Researcher",
@@ -291,16 +291,16 @@ def track_data(name):
 def render_agent_stats(rows, language="en"):
     tr = language == "tr"
     headers = (
-        "Agent | Süre | Model çağrısı | Giriş tokenı | Çıkış tokenı | Model araç çağrısı | Veri erişimi | Durum"
+        "Agent | Süre | Model çağrısı | Giriş tokenı | Çıkış tokenı | Veri erişimi | Durum"
         if tr
-        else "Agent | Duration | Model calls | Input tokens | Output tokens | Model tool calls | Data accesses | Status"
+        else "Agent | Duration | Model calls | Input tokens | Output tokens | Data accesses | Status"
     )
-    lines = ["| " + headers + " |", "|---|---:|---:|---:|---:|---:|---:|---|"]
+    lines = ["| " + headers + " |", "|---|---:|---:|---:|---:|---:|---|"]
     for row in rows:
         missing = row["usage_missing"]
         suffix = " + ?" if missing else ""
         lines.append(
-            f"| {row['agent']} | {row['duration_seconds']:.2f}s | {row['llm_calls']} | {row['tokens_in']:,}{suffix} | {row['tokens_out']:,}{suffix} | {sum(row['tools'].values())} | {sum(row['data_accesses'].values())} | {row['status']} |"
+            f"| {row['agent']} | {row['duration_seconds']:.2f}s | {row['llm_calls']} | {row['tokens_in']:,}{suffix} | {row['tokens_out']:,}{suffix} | {sum(row['data_accesses'].values())} | {row['status']} |"
         )
     if not rows:
         lines.append("\nÖlçüm bulunmuyor." if tr else "\nNo measurements available.")
@@ -312,27 +312,32 @@ def render_agent_stats(rows, language="en"):
     for row in rows:
         lines.append(f"\n##### {row['agent']}")
         for label, key in (
-            ("Tools", "tools"),
             ("Veri erişimleri" if tr else "Data accesses", "data_accesses"),
         ):
             lines.append(
                 f"- {label}: "
                 + (", ".join(f"{k} ×{v}" for k, v in sorted(row[key].items())) or "—")
             )
-        lines.append(f"- {'Hatalar' if tr else 'Errors'}: {row['errors']}")
-        if outcomes := row.get("data_outcomes"):
-            statuses = {
-                "received": "alındı" if tr else "received",
-                "empty": "veri yok" if tr else "no usable records",
-                "unavailable": "erişilemedi" if tr else "unavailable",
-                "skipped": "atlandı" if tr else "skipped",
-            }
-            details = ", ".join(f"{source} ({statuses[status]})" for source, status in outcomes.items())
-            lines.append(f"- {'Kaynak durumu' if tr else 'Source outcomes'}: {details}")
+        statuses = {
+            "empty": "veri yok" if tr else "no usable records",
+            "unavailable": "erişilemedi" if tr else "unavailable",
+            "skipped": "atlandı" if tr else "skipped",
+        }
+        issues = [
+            f"{source} ({statuses.get(status, status)})"
+            for source, status in row.get("data_outcomes", {}).items()
+            if status != "received"
+        ]
+        errors = ", ".join(issues)
+        if row["errors"]:
+            count = f"{row['errors']} {'çalışma hatası' if tr else 'execution errors'}"
+            errors = "; ".join(filter(None, (count, errors)))
+        errors = errors or "0"
+        lines.append(f"- {'Hatalar' if tr else 'Errors'}: {errors}")
         if len(row.get("runs", ())) > 1:
             for i, run in enumerate(row["runs"], 1):
                 lines.append(
-                    f"- {'Çalıştırma' if tr else 'Run'} {i}: {run['duration_seconds']:.2f}s; LLM {run['llm_calls']}; tokens {run['tokens_in']}/{run['tokens_out']}; missing {run['usage_missing']}; tools {sum(run['tools'].values())}; {run['status']}"
+                    f"- {'Çalıştırma' if tr else 'Run'} {i}: {run['duration_seconds']:.2f}s; LLM {run['llm_calls']}; tokens {run['tokens_in']}/{run['tokens_out']}; missing {run['usage_missing']}; {run['status']}"
                 )
     return "\n".join(lines)
 

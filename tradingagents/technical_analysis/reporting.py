@@ -46,7 +46,7 @@ def add_candle_disclosure(report, candle: DailyCandle, completed_rows, latest_pr
         _last_completed_date(completed_rows) or unavailable,
     ]
     if candle.date and candle.closed is not True and pd.notna(latest_price):
-        values.append(_fmt(latest_price))
+        values.append(f"{latest_price:.2f}")
 
     lines = "\n".join(f"- **{label}:** {value}" for label, value in zip(labels[:len(values)], values, strict=True))
     disclosure = f"**{title}**\n\n{lines}"
@@ -66,7 +66,7 @@ def render_zones(zones: list[ZoneEvidence], *, language="English") -> str:
     lines = []
     for zone in zones:
         lower, upper = zone.bounds
-        summary = f"- **{labels[zone.side]} ({zone.period} bar):** {_fmt(lower)}–{_fmt(upper)}."
+        summary = f"- **{labels[zone.side]} ({zone.period} bar):** {lower:.2f}–{upper:.2f}."
         if turkish:
             summary += f" İlk oluşum {zone.formation_date}."
             summary += (

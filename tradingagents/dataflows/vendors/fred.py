@@ -14,10 +14,11 @@ import logging
 import os
 import time
 from contextlib import ExitStack
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import pytz
+from dateutil.relativedelta import relativedelta
 
 from tradingagents.dataflows.config import get_config
 from tradingagents.dataflows.errors import VendorNotConfiguredError
@@ -221,7 +222,7 @@ def get_macro_data(
     key = (series_id, as_of_date, start_date, pit)
     config = get_config()
     cache_root = config.get("fred_cache_dir") or config["data_cache_dir"]
-    digest = hashlib.sha256(json.dumps(key).encode()).hexdigest()
+    digest = hashlib.sha256(json.dumps(("macro-references-v2", *key)).encode()).hexdigest()
     path = Path(cache_root) / "fred" / f"{digest}.json"
 
     with ExitStack() as stack:
@@ -293,6 +294,7 @@ def _fetch_report(series_id: str, as_of_date: str, start_date: str, pit: str) ->
         f"- Frequency: {frequency}"
         f"{f' ({seasonal})' if seasonal else ''}\n"
         f"- Window: {start_date} to {as_of_date}\n"
+        f"- Vintage: {pit} (FRED realtime_start = realtime_end; values available in this vintage)\n"
     )
 
     if not points:
@@ -317,6 +319,18 @@ def _fetch_report(series_id: str, as_of_date: str, start_date: str, pit: str) ->
     except ValueError:
         summary = f"\n**Latest:** {last_val} ({last_date})\n"
 
+    # Preserve calendar references before truncating the daily table. The analyst
+    # can calculate long-window changes without receiving hundreds of rows.
+    latest_day = date.fromisoformat(last_date)
+    references = {last_date: last_val}
+    for months in (1, 3, 12):
+        target = latest_day - relativedelta(months=months)
+        candidates = [(day, value) for day, value in points
+                      if day <= target.isoformat() and (target - date.fromisoformat(day)).days <= 7]
+        if candidates:
+            day, value = max(candidates)
+            references[day] = value
+    header += f"- Reference observations: {json.dumps(references)}\n"
     shown = points
     note = ""
     if len(points) > MAX_ROWS:

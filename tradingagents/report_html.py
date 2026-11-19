@@ -58,6 +58,15 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .masthead .logo img {
   display: block; width: min(15rem, 70vw); aspect-ratio: 6 / 1;
   object-fit: cover; object-position: center 52%;
+  /* The supplied PNG has a baked-in pale checkerboard. Push that background
+     to white, then blend it into the paper without changing the source asset. */
+  filter: contrast(3); mix-blend-mode: multiply;
+}
+@media (prefers-color-scheme: dark) {
+  .masthead .logo img { filter: contrast(3) invert(1); mix-blend-mode: screen; }
+}
+@media print {
+  .masthead .logo img { filter: contrast(3); mix-blend-mode: multiply; }
 }
 .masthead h1 {
   margin: 0; font: 600 2.6rem/1.1 var(--sans); letter-spacing: -0.02em;
@@ -238,7 +247,6 @@ def _run_details(final_state: dict, settings: dict | None) -> list[tuple[str, st
             details.append(("Data vendors", " ".join(
                 _group(_CATEGORY.get(k, k), _chain(v)) for k, v in vendors.items()
             )))
-        details.append(("Version", escape(f"FinBotAgents {s('version', '?')}")))
     if final_state.get("memory_note"):
         details.append(("Memory log", escape(final_state["memory_note"])))
     return details

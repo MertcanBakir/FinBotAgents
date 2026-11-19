@@ -21,7 +21,7 @@ from tradingagents.agents.risk_mgmt.neutral_debator import create_neutral_debato
 
 _REPORTS = {
     "company_of_interest": "AAPL", "asset_type": "stock",
-    "market_report": "m", "sentiment_report": "s",
+    "market_report": "m", "macro_report": "s",
     "news_report": "n", "fundamentals_report": "f",
 }
 

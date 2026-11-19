@@ -19,7 +19,7 @@ from langchain_core.runnables import RunnableLambda
 from pydantic import Field
 
 from tradingagents.agents import context, schemas
-from tradingagents.agents.analysts import sentiment_analyst
+from tradingagents.agents.analysts import news_analyst
 from tradingagents.dataflows import router
 from tradingagents.dataflows.vendors.yahoo import market as yahoo_market, snapshot
 from tradingagents.default_config import DEFAULT_CONFIG
@@ -39,8 +39,7 @@ STRUCTURED = {
     schemas.PortfolioDecision: schemas.PortfolioDecision(
         rating=schemas.PortfolioRating.OVERWEIGHT, executive_summary="s",
         investment_thesis="Street consensus rating: Buy (28 of 35 analysts)."),
-    schemas.SentimentReport: schemas.SentimentReport(
-        overall_band=schemas.SentimentBand.NEUTRAL, overall_score=5.0, confidence="low", narrative="n"),
+
 }
 
 class ScriptedModel(BaseChatModel):
@@ -101,8 +100,7 @@ def offline(monkeypatch, tmp_path):
     })
     monkeypatch.setattr(snapshot, "load_ohlcv",
                         lambda *a, **k: called.add("ohlcv") or prices.copy())
-    monkeypatch.setattr(sentiment_analyst, "fetch_stocktwits_messages", lambda *a, **k: "no posts")
-    monkeypatch.setattr(sentiment_analyst, "fetch_reddit_posts", lambda *a, **k: "no posts")
+    monkeypatch.setattr(news_analyst, "fetch_stocktwits_messages", lambda *a, **k: "no posts")
     monkeypatch.setattr(yahoo_market.yf, "Ticker", lambda s: type("T", (), {"info": {"longName": "NVIDIA"}})())
     context._identity.cache_clear()
     return called
@@ -179,7 +177,7 @@ def test_a_full_run_reaches_a_logged_decision(tmp_path, monkeypatch, offline, st
     state, signal = graph.propagate("NVDA", TRADE_DATE)
 
     assert signal == state["final_rating"] == "Overweight"
-    for key in ("market_report", "sentiment_report", "news_report", "fundamentals_report",
+    for key in ("market_report", "macro_report", "news_report", "fundamentals_report",
                 "investment_plan", "trader_investment_plan", "final_trade_decision"):
         assert state[key].strip(), key
     tool_methods = {"get_news", "get_global_news",
@@ -252,7 +250,7 @@ def test_each_report_streams_as_soon_as_its_analyst_files_it(tmp_path, monkeypat
     """The main state takes the analysts' reports only when the slowest one is
     done; the CLI shows each report, and stops each clock, as it lands."""
     graph = _graph(tmp_path, monkeypatch, ScriptedModel())
-    reports = ("market_report", "sentiment_report", "news_report", "fundamentals_report")
+    reports = ("market_report", "macro_report", "news_report", "fundamentals_report")
 
     first = next(state for _, state in graph.stream_run(graph.create_run_state("NVDA", TRADE_DATE),
                                                         **graph.propagator.get_graph_args())
@@ -442,7 +440,7 @@ def test_agent_stats_cover_parallel_nodes_tools_and_reset(tmp_path, monkeypatch,
     state, _ = graph.propagate("NVDA", TRADE_DATE)
     rows = {r["agent"]: r for r in state["agent_stats"]}
     assert set(rows) == {
-        "Market Analyst", "Sentiment Analyst", "News Analyst", "Fundamentals Analyst",
+        "Market Analyst", "Macro Analyst", "News Analyst", "Fundamentals Analyst",
         "Bull Researcher", "Bear Researcher", "Research Manager", "Trader",
         "Aggressive Analyst", "Conservative Analyst", "Neutral Analyst", "Portfolio Manager", "Memory Log",
     }
@@ -454,8 +452,11 @@ def test_agent_stats_cover_parallel_nodes_tools_and_reset(tmp_path, monkeypatch,
     assert market["usage_missing"] == 2
     assert market["tools"] == {}
     assert market["data_accesses"] == {"market_price_history": 1}
-    assert rows["Sentiment Analyst"]["tools"] == {}
-    assert rows["Sentiment Analyst"]["data_accesses"].get("get_news") == 1
+    assert rows["Macro Analyst"]["tools"] == {}
+    assert rows["Macro Analyst"]["llm_calls"] == 1
+    assert rows["Macro Analyst"]["data_accesses"] == {
+        "get_macro_indicators": 6, "get_global_news": 1,
+    }
     fundamentals = rows["Fundamentals Analyst"]
     assert fundamentals["llm_calls"] == 1
     assert fundamentals["tools"] == {}
@@ -476,10 +477,9 @@ def test_agent_stats_cover_parallel_nodes_tools_and_reset(tmp_path, monkeypatch,
     assert news["tools"] == {}
     assert news["data_accesses"] == {
         "get_news": 1, "get_global_news": 1, "get_insider_transactions": 1,
-        "get_macro_indicators": 6,
     }
-    assert news["data_outcomes"]["FRED cpi"] == "received"
-    assert len(news["data_outcomes"]) == 9
+    assert rows["Macro Analyst"]["data_outcomes"]["FRED cpi"] == "received"
+    assert len(news["data_outcomes"]) == 4
     assert rows["Bull Researcher"]["llm_calls"] == 1
     # Reusing a graph must not carry measurements from the previous run.
     again, _ = graph.propagate("NVDA", TRADE_DATE)

@@ -153,6 +153,7 @@ def get_global_news_yfinance(
     limit: int | None = None,
     *,
     sector_query: str | None = None,
+    sector_only: bool = False,
 ) -> str:
     """
     Retrieve global/macro economic news using yfinance Search.
@@ -173,6 +174,8 @@ def get_global_news_yfinance(
     if limit is None:
         limit = config["global_news_article_limit"]
     search_queries = list(config["global_news_queries"])
+    if sector_only:
+        search_queries = []
     if sector_query:
         search_queries.insert(0, sector_query)
 

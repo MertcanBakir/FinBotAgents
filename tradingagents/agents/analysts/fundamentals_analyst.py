@@ -1,11 +1,9 @@
 import json
 import logging
-import re
-from calendar import monthrange
-from datetime import date
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from tradingagents.agents.analyst_support.fundamentals import limit_statement_history
 from tradingagents.agents.context import get_instrument_context_from_state, get_language_instruction
 from tradingagents.agents.structured import NO_EXTERNAL_TOOLS
 from tradingagents.agents.tools import (
@@ -23,35 +21,6 @@ from tradingagents.dataflows.vendors.yahoo.valuation import compare_pe_benchmark
 from tradingagents.horizons import HORIZON_CONFIG, parse_analysis_horizon
 
 logger = logging.getLogger(__name__)
-_SEC_PERIOD_ROW = re.compile(r"^(\d{4}-\d{2}-\d{2})(?: \(\d+ months\))?,")
-
-
-def _months_before(day, months):
-    year, month_index = divmod(day.year * 12 + day.month - 1 - months, 12)
-    month = month_index + 1
-    return date(year, month, min(day.day, monthrange(year, month)[1]))
-
-
-def _limit_statement_history(data, months):
-    """Keep recent SEC period rows and their original headers and units."""
-    if not isinstance(data, str) or "\n# SEC EDGAR facts filed on or before " not in data:
-        return data
-    lines = data.splitlines(keepends=True)
-    periods = {
-        index: date.fromisoformat(match[1])
-        for index, line in enumerate(lines)
-        if (match := _SEC_PERIOD_ROW.match(line))
-    }
-    if not periods:
-        return data
-    latest = max(periods.values())
-    cutoff = _months_before(latest, months)
-    return "".join(
-        line for index, line in enumerate(lines)
-        if index not in periods or periods[index] >= cutoff
-    )
-
-
 def create_fundamentals_analyst(llm):
     def fundamentals_analyst_node(state):
         ticker = state["company_of_interest"]
@@ -81,7 +50,7 @@ def create_fundamentals_analyst(llm):
             data_by_source[tool.name] = data or "No data returned."
 
         for tool in (get_income_statement, get_balance_sheet, get_cashflow):
-            data_by_source[tool.name] = _limit_statement_history(data_by_source[tool.name], months)
+            data_by_source[tool.name] = limit_statement_history(data_by_source[tool.name], months)
 
         outlook = data_by_source[get_upcoming_earnings_and_guidance.name]
         if isinstance(outlook, dict):

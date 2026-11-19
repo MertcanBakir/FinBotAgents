@@ -10,6 +10,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from ..errors import AnalysisServiceError
 from .contracts import ConnectionInput, StartAnalysis
+from .health import ResourceMonitor
 from .repository import PUBLIC_JOB_COLUMNS
 
 
@@ -29,9 +30,10 @@ def public_job(row):
     }
 
 
-def create_app(*, repository, authenticator, vault, probe, storage, dispatcher: Dispatcher):
+def create_app(*, repository, authenticator, vault, probe, storage, dispatcher: Dispatcher, resource_monitor=None):
     app = FastAPI(title="Lucrari Analysis API", version="1", docs_url=None, redoc_url=None)
     bearer = HTTPBearer(auto_error=False)
+    monitor = resource_monitor if resource_monitor is not None else ResourceMonitor()
 
     @app.middleware("http")
     async def safe_headers(request: Request, call_next):
@@ -110,8 +112,13 @@ def create_app(*, repository, authenticator, vault, probe, storage, dispatcher: 
     User = Annotated[UUID, Depends(identity)]
 
     @app.get("/healthz")
-    def health():
-        return {"status": "ok"}
+    def health(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]):
+        if credentials is None:
+            return {"status": "ok"}
+        user_id = identity(credentials)
+        if user_id != repository.settings.personal_user_id:
+            raise AnalysisServiceError("ACCESS_DENIED")
+        return {"status": "ok", "checks": {"api": "ok"}, "resources": monitor.snapshot()}
 
     @app.get("/v1/providers")
     def providers(user_id: User):

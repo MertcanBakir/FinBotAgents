@@ -89,6 +89,25 @@ def test_data_decorator_is_transparent_without_graph_context():
     assert read(7) == 7
 
 
+def test_render_hides_tools_and_successes_and_groups_source_issues_under_errors():
+    h = AgentStatsHandler()
+    owner = node(h, "News Analyst")
+    for source, status in (("Successful source", "received"), ("Example source", "unavailable"),
+                           ("StockTwits", "empty"), ("Insiders", "skipped")):
+        h.data_outcome(owner, source, status)
+    h.on_chain_end({}, run_id=owner)
+    text = render_agent_stats(h.snapshot(), "tr")
+    assert "Model araç çağrısı" not in text
+    assert "Tools" not in text and "Kaynak durumu" not in text
+    assert "Successful source" not in text
+    assert "Hatalar: Example source (erişilemedi), StockTwits (veri yok), Insiders (atlandı)" in text
+    header, separator, data = text.splitlines()[:3]
+    assert header.count("|") == separator.count("|") == data.count("|") == 8
+    english = render_agent_stats(h.snapshot())
+    assert "Model tool calls" not in english and "Source outcomes" not in english
+    assert "Errors: Example source (unavailable)" in english
+
+
 def test_stats_are_inside_final_decision_in_markdown_and_html(tmp_path):
     h = AgentStatsHandler()
     owner = node(h, "Market Analyst")
@@ -113,7 +132,7 @@ def test_direct_data_access_uses_current_nested_graph_owner():
     class State(TypedDict):
         value: int
 
-    @track_data("reddit")
+    @track_data("example_source")
     def fetch():
         return 7
 
@@ -121,13 +140,13 @@ def test_direct_data_access_uses_current_nested_graph_owner():
         return {"value": fetch()}
 
     graph = StateGraph(State)
-    graph.add_node("Sentiment Analyst", sentiment)
-    graph.add_edge(START, "Sentiment Analyst")
-    graph.add_edge("Sentiment Analyst", END)
+    graph.add_node("Macro Analyst", sentiment)
+    graph.add_edge(START, "Macro Analyst")
+    graph.add_edge("Macro Analyst", END)
     h = AgentStatsHandler()
     assert graph.compile().invoke({"value": 0}, config={"callbacks": [h]}) == {"value": 7}
     row, = h.snapshot()
-    assert row["data_accesses"] == {"reddit": 1}
+    assert row["data_accesses"] == {"example_source": 1}
     assert row["tools"] == {}
 
 

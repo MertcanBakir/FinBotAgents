@@ -52,7 +52,7 @@ def state():
         "market_report": "Technical evidence",
         "fundamentals_report": "Fundamental evidence",
         "news_report": "News evidence",
-        "sentiment_report": "Sentiment evidence",
+        "macro_report": "Sentiment evidence",
         "investment_debate_state": {
             "bull_history": "Bull evidence",
             "bear_history": "Bear evidence",
@@ -195,7 +195,7 @@ def test_missing_selected_analyst_is_partial_and_null(state, request_data, setti
 
 def test_unselected_analyst_is_not_invented_or_required(state, request_data, settings):
     state["news_report"] = None
-    request_data["analysts"] = ["market", "social", "fundamentals"]
+    request_data["analysts"] = ["market", "macro", "fundamentals"]
     assert normalize(state, request_data, settings).quality == "complete"
 
 
