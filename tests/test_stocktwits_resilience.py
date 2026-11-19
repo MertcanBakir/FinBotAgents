@@ -97,25 +97,6 @@ def _stream(*bodies):
     return _Resp()
 
 
-def _drop_spam(texts):
-    return [not t.startswith("SPAM") for t in texts], "Screened: note"
-
-
-@pytest.mark.unit
-class TestStockTwitsScreening:
-    def test_screened_out_messages_leave_the_block_and_its_counts(self):
-        with patch.object(stocktwits, "urlopen", return_value=_stream("SPAM", "long NVDA")):
-            out = stocktwits.fetch_stocktwits_messages("NVDA", screen=_drop_spam)
-        assert out.startswith("Screened: note")
-        assert "long NVDA" in out and "SPAM" not in out
-        assert "Total: 1 most-recent" in out
-
-    def test_all_screened_out_is_not_called_empty(self):
-        with patch.object(stocktwits, "urlopen", return_value=_stream("SPAM")):
-            out = stocktwits.fetch_stocktwits_messages("NVDA", screen=_drop_spam)
-        assert "none of the 1 StockTwits messages is about $NVDA" in out
-
-
 @pytest.mark.unit
 def test_html_entities_in_message_bodies_are_decoded():
     with patch.object(stocktwits, "urlopen", return_value=_stream("S&amp;P wasn&#39;t up")):

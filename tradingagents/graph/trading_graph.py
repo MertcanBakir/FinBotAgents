@@ -55,7 +55,7 @@ class TradingAgentsGraph:
 
     def __init__(
         self,
-        selected_analysts=("market", "social", "news", "fundamentals"),
+        selected_analysts=("market", "macro", "news", "fundamentals"),
         debug=False,
         config: dict[str, Any] = None,
         callbacks: list | None = None,
@@ -452,7 +452,7 @@ class TradingAgentsGraph:
             "trade_date": final_state["trade_date"],
             "analysis_horizon": final_state["analysis_horizon"],
             "market_report": final_state["market_report"],
-            "sentiment_report": final_state["sentiment_report"],
+            "macro_report": final_state["macro_report"],
             "news_report": final_state["news_report"],
             "fundamentals_report": final_state["fundamentals_report"],
             "investment_debate_state": {

@@ -20,7 +20,7 @@ TITLES = {
         "Teknik analiz",
         "Temel analiz",
         "Haber analizi",
-        "Piyasa duyarlılığı",
+        "Makroekonomik analiz",
         "Boğa görüşü",
         "Ayı görüşü",
         "İşlem planı",
@@ -34,7 +34,7 @@ TITLES = {
         "Technical analysis",
         "Fundamentals",
         "News",
-        "Sentiment",
+        "Macro",
         "Bull case",
         "Bear case",
         "Trade plan",
@@ -136,7 +136,7 @@ def normalize_result(
         ("technical", _text(state.get("market_report")), {}),
         ("fundamentals", _text(state.get("fundamentals_report")), {}),
         ("news", _text(state.get("news_report")), {}),
-        ("sentiment", _text(state.get("sentiment_report")), {}),
+        ("macro", _text(state.get("macro_report")), {}),
         ("bull", _text(debate.get("bull_history")), {}),
         ("bear", _text(debate.get("bear_history")), {}),
         (
@@ -159,7 +159,7 @@ def normalize_result(
         "market": "technical",
         "fundamentals": "fundamentals",
         "news": "news",
-        "social": "sentiment",
+        "macro": "macro",
     }
     required = {requested[key] for key in request.analysts} | {
         "bull",

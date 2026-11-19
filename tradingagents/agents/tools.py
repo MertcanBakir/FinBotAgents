@@ -256,6 +256,7 @@ def get_global_news(
     limit: Annotated[int | None, "Max articles to return; omit to use the configured default"] = None,
     trade_date: Annotated[str, InjectedState("trade_date")] = "",
     sector_query: Annotated[str | None, "Additional sector or instrument search"] = None,
+    sector_only: Annotated[bool, "Search only the supplied sector query"] = False,
 ) -> str:
     """
     Retrieve global news data.
@@ -272,6 +273,8 @@ def get_global_news(
         str: A formatted string containing global news data
     """
     options = {"sector_query": sector_query} if sector_query else {}
+    if sector_only:
+        options["sector_only"] = True
     return route_to_vendor("get_global_news", as_of(curr_date, trade_date), look_back_days, limit, **options)
 
 

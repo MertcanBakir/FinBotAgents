@@ -17,7 +17,7 @@ class CryptoAssetModeTests(unittest.TestCase):
     def test_filters_out_fundamentals_analyst_for_crypto(self):
         analysts = [
             AnalystType.MARKET,
-            AnalystType.SOCIAL,
+            AnalystType.MACRO,
             AnalystType.NEWS,
             AnalystType.FUNDAMENTALS,
         ]
@@ -26,7 +26,7 @@ class CryptoAssetModeTests(unittest.TestCase):
             filter_analysts_for_asset_type(analysts, AssetType.CRYPTO),
             [
                 AnalystType.MARKET,
-                AnalystType.SOCIAL,
+                AnalystType.MACRO,
                 AnalystType.NEWS,
             ],
         )
@@ -34,7 +34,7 @@ class CryptoAssetModeTests(unittest.TestCase):
     def test_keeps_all_analysts_for_stock(self):
         analysts = [
             AnalystType.MARKET,
-            AnalystType.SOCIAL,
+            AnalystType.MACRO,
             AnalystType.NEWS,
             AnalystType.FUNDAMENTALS,
         ]

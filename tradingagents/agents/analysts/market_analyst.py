@@ -1,15 +1,17 @@
 """Run the Market Analyst's indicator selection and report model calls."""
 
-import json
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from tradingagents.agent_stats import track_data
+from tradingagents.agents.analyst_support.market import (
+    MAX_GROUPS,
+    load_prices,
+    select_indicator_groups,
+)
 from tradingagents.agents.context import get_instrument_context_from_state, get_language_instruction
 from tradingagents.dataflows.config import get_config
 from tradingagents.dataflows.errors import NoMarketDataError, VendorUnavailableError
 from tradingagents.dataflows.vendors.yahoo.candles import latest_daily_candle
-from tradingagents.dataflows.vendors.yahoo.snapshot import load_verified_market_rows
 from tradingagents.horizons import HORIZON_CONFIG, horizon_context, parse_analysis_horizon
 from tradingagents.technical_analysis.indicators import calculate_indicators, profile_indicators
 from tradingagents.technical_analysis.reporting import (
@@ -21,44 +23,6 @@ from tradingagents.technical_analysis.reporting import (
 )
 from tradingagents.technical_analysis.zones import calculate_scipy_zones
 
-MAX_GROUPS = 8
-
-
-@track_data("market_price_history")
-def _load_prices(symbol, date, *, history_rows, interval):
-    return load_verified_market_rows(symbol, date, history_rows=history_rows, interval=interval)
-
-
-def _selection(text, optional, required):
-    selected = list(required)
-    notes = []
-    text = text.strip()
-    if text.startswith("```") and text.endswith("```"):
-        text = text.partition("\n")[2][:-3].strip()
-    try:
-        items = json.loads(text)["groups"]
-    except (ValueError, KeyError, TypeError):
-        return selected, ["No readable optional indicator group selection."]
-    if not isinstance(items, list):
-        return selected, ["No readable optional indicator group selection."]
-    invalid_count = 0
-    overflow = False
-    for item in items:
-        if not isinstance(item, str) or item not in optional:
-            invalid_count += 1
-        elif item not in selected:
-            if len(selected) < MAX_GROUPS:
-                selected.append(item)
-            else:
-                overflow = True
-    if invalid_count:
-        notes.append(f"{invalid_count} requested indicator groups are outside the allowed list.")
-    if overflow:
-        notes.append("Additional indicator groups omitted because the limit is eight.")
-    if not any(group not in required for group in selected):
-        notes.append("No optional indicator groups selected.")
-    return selected, notes
-
 
 def create_market_analyst(llm):
     def market_analyst_node(state):
@@ -69,7 +33,7 @@ def create_market_analyst(llm):
         target_days = profile["target_days"]
         language = get_config().get("output_language", "English")
         try:
-            rows = _load_prices(
+            rows = load_prices(
                 state["company_of_interest"], date,
                 history_rows=history_rows, interval=profile["primary_timeframe"],
             )
@@ -113,7 +77,7 @@ def create_market_analyst(llm):
             )),
             HumanMessage(content=f"Analysis date: {date}\n{context}\n{price_context(completed, target_days)}"),
         ])
-        selected, notes = _selection(selection.text, optional, required)
+        selected, notes = select_indicator_groups(selection.text, optional, required)
         selected_groups = {group: groups[group] for group in selected}
         calculated = calculate_indicators(completed, selected_groups, target_days)
         indicator_lines = indicator_context(completed, selected_groups, calculated)
@@ -155,6 +119,8 @@ def create_market_analyst(llm):
                 "price targets and odds. "
                 "Use only the supplied dated data for numerical claims and do not infer "
                 "crossovers or historical price behavior without supporting rows. "
+                "Round displayed prices, indicators and percentages to two decimal places; "
+                "keep dates, period lengths, counts and volume integers unchanged. "
                 "Do not include a summary table or repeat the indicator list in the outlook. "
                 "Frame the outlook for the selected analysis horizon. "
                 + get_language_instruction(preserve_decision_labels=False)

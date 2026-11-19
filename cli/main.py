@@ -114,7 +114,7 @@ def backtest(
     horizon: str = typer.Option(..., "--horizon", help="Analysis horizon: short_1m, medium_3m, or long_12m"),
     every: int = typer.Option(7, "--every", help="Days between analysis dates"),
     analysts: str = typer.Option(
-        None, "--analysts", help="Comma-separated analysts to run: market, sentiment, news, fundamentals; omit for all the asset type allows"
+        None, "--analysts", help="Comma-separated analysts to run: market, macro, news, fundamentals; omit for all the asset type allows"
     ),
     asset_type: str = typer.Option("stock", "--asset-type", help="stock or crypto"),
     portfolio: str = typer.Option(

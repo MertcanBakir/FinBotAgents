@@ -20,7 +20,7 @@ REPORT_AGENTS = [
     "analysts/market_analyst.py",
     "analysts/news_analyst.py",
     "analysts/fundamentals_analyst.py",
-    "analysts/sentiment_analyst.py",
+    "analysts/macro_analyst.py",
     "researchers/bull_researcher.py",
     "researchers/bear_researcher.py",
     "managers/research_manager.py",

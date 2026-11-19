@@ -14,7 +14,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import tradingagents.agents.analysts.sentiment_analyst as sentiment
 from tradingagents.agents.managers.portfolio_manager import create_portfolio_manager
 from tradingagents.agents.managers.research_manager import create_research_manager
 from tradingagents.agents.structured import NO_EXTERNAL_TOOLS
@@ -120,28 +119,6 @@ def test_portfolio_manager_prompt_states_constraint(use_structured):
     assert "6 months" not in state["final_trade_decision"]
 
 
-@pytest.mark.unit
-def test_sentiment_prompt_states_constraint(monkeypatch):
-    from tradingagents.agents.schemas import SentimentBand, SentimentReport
-
-    # Pre-fetched sources are stubbed so the prompt builds without network I/O.
-    monkeypatch.setattr(sentiment, "fetch_stocktwits_messages", lambda *a, **k: "st")
-    monkeypatch.setattr(sentiment, "fetch_reddit_posts", lambda *a, **k: "rd")
-    monkeypatch.setattr(sentiment.get_news, "func", lambda *a, **k: "news", raising=False)
-
-    captured = {}
-    llm = _capturing_llm(captured, SentimentReport(
-        overall_band=SentimentBand.BULLISH, overall_score=7.5,
-        confidence="high", narrative="n",
-    ))
-    sentiment.create_sentiment_analyst(llm)({
-        "company_of_interest": "NVDA", "trade_date": "2026-01-15",
-        "asset_type": "stock", "messages": [],
-    })
-    text = _prompt_text(captured["prompt"])
-    assert NO_EXTERNAL_TOOLS in text
-    # This agent binds no tools, so tool-range wording must not reappear.
-    assert "tool-call date ranges" not in text
 
 
 @pytest.mark.unit
@@ -240,9 +217,9 @@ def test_fundamentals_prefetches_all_sources_once_and_writes_one_report(monkeypa
     ("DATA_UNAVAILABLE: provider unavailable", "DATA_UNAVAILABLE: provider unavailable"),
 ])
 def test_news_insider_sales_distinguishes_empty_and_unavailable(source, expected):
-    from tradingagents.agents.analysts.news_analyst import _insider_sales
+    from tradingagents.agents.analyst_support.insider_sales import prepare_insider_sales
 
-    assert _insider_sales(source, "2026-01-15").endswith(expected)
+    assert prepare_insider_sales(source, "2026-01-15").endswith(expected)
 
 
 @pytest.mark.unit
@@ -286,23 +263,3 @@ def test_constraint_text_is_unambiguous():
     # No template braces: it is embedded in ChatPromptTemplate strings, where
     # braces would be parsed as input variables.
     assert "{" not in NO_EXTERNAL_TOOLS and "}" not in NO_EXTERNAL_TOOLS
-
-
-@pytest.mark.unit
-def test_the_sentiment_prompt_names_the_subreddits_searched(monkeypatch):
-    from tradingagents.agents.schemas import SentimentBand, SentimentReport
-
-    monkeypatch.setattr(sentiment, "fetch_stocktwits_messages", lambda *a, **k: "st")
-    monkeypatch.setattr(sentiment, "fetch_reddit_posts", lambda *a, **k: "rd")
-    monkeypatch.setattr(sentiment.get_news, "func", lambda *a, **k: "news", raising=False)
-    captured = {}
-    llm = _capturing_llm(captured, SentimentReport(
-        overall_band=SentimentBand.NEUTRAL, overall_score=5.0, confidence="low", narrative="n",
-    ))
-    sentiment.create_sentiment_analyst(llm)({
-        "company_of_interest": "BTC-USD", "trade_date": "2026-01-15",
-        "asset_type": "crypto", "messages": [],
-    })
-    text = _prompt_text(captured["prompt"])
-    assert "r/Bitcoin, r/CryptoCurrency, r/CryptoMarkets" in text
-    assert "wallstreetbets" not in text

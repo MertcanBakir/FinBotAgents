@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from tradingagents.horizons import AnalysisHorizon
 
-Analyst = Literal["market", "social", "news", "fundamentals"]
+Analyst = Literal["market", "macro", "news", "fundamentals"]
 Rating = Literal["Buy", "Overweight", "Hold", "Underweight", "Sell", "REVIEW"]
 Provider = Literal[
     "chatgpt", "openai", "anthropic", "google", "xai", "deepseek", "qwen", "qwen-cn",
@@ -38,7 +38,7 @@ class AnalysisRequest(Contract):
     analysis_horizon: AnalysisHorizon
     profile: Literal["standard"] = "standard"
     language: Literal["tr", "en"] = "tr"
-    analysts: tuple[Analyst, ...] = ("market", "social", "news", "fundamentals")
+    analysts: tuple[Analyst, ...] = ("market", "macro", "news", "fundamentals")
 
     _ticker = field_validator("ticker")(validate_ticker)
 
@@ -108,7 +108,7 @@ SectionCode = Literal[
     "technical",
     "fundamentals",
     "news",
-    "sentiment",
+    "macro",
     "bull",
     "bear",
     "trade_plan",

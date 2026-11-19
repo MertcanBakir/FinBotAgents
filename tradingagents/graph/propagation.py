@@ -64,7 +64,7 @@ class Propagator:
             ),
             "market_report": "",
             "fundamentals_report": "",
-            "sentiment_report": "",
+            "macro_report": "",
             "news_report": "",
         }
 

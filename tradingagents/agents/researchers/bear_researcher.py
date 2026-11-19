@@ -16,7 +16,7 @@ def create_bear_researcher(llm):
             investment_debate_state.get("current_response", ""), "bull analyst"
         )
         market_research_report = report_or_absent(state["market_report"], "market")
-        sentiment_report = report_or_absent(state["sentiment_report"], "sentiment")
+        macro_report = report_or_absent(state["macro_report"], "macro")
         news_report = report_or_absent(state["news_report"], "news")
         fundamentals_report = report_or_absent(state["fundamentals_report"], "fundamentals")
         instrument_context = get_instrument_context_from_state(state)
@@ -42,7 +42,7 @@ Resources available:
 
 {instrument_context}
 Market research report: {market_research_report}
-Social media sentiment report: {sentiment_report}
+Macroeconomic report: {macro_report}
 Latest world affairs news: {news_report}
 {fundamentals_label}: {fundamentals_report}
 Conversation history of the debate: {history}

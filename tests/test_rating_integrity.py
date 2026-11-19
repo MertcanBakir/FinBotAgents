@@ -201,7 +201,7 @@ def test_a_decision_prompt_states_the_shape_of_its_answer(module, factory, must_
     state = {
         "company_of_interest": "NVDA", "trade_date": "2026-08-14", "asset_type": "stock",
         "analysis_horizon": "medium_3m",
-        "instrument_context": "", "market_report": "M", "sentiment_report": "S",
+        "instrument_context": "", "market_report": "M", "macro_report": "S",
         "news_report": "N", "fundamentals_report": "F", "investment_plan": "P",
         "trader_investment_plan": "T", "past_context": "", "portfolio_context": "",
         "investment_debate_state": {"bull_history": "b", "bear_history": "r", "history": "h",

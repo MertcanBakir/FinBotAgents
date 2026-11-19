@@ -81,7 +81,7 @@ def _make_pm_state(past_context=""):
             "count": 1,
         },
         "market_report": "Market report.",
-        "sentiment_report": "Sentiment report.",
+        "macro_report": "Sentiment report.",
         "news_report": "News report.",
         "fundamentals_report": "Fundamentals report.",
         "investment_plan": "Research plan.",
@@ -936,7 +936,7 @@ class TestLegacyRemoval:
             "trade_date": "2026-01-10",
             "analysis_horizon": "medium_3m",
             "market_report": "",
-            "sentiment_report": "",
+            "macro_report": "",
             "news_report": "",
             "fundamentals_report": "",
             "investment_debate_state": {
