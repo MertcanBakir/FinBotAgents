@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import copy
 import time
+from threading import Barrier, Lock
 
 import pandas as pd
 import pytest
@@ -47,7 +48,6 @@ class ScriptedModel(BaseChatModel):
 
     structured: bool = False
     calls: list = Field(default_factory=list)   # shared across bound copies
-    threads: set = Field(default_factory=set)   # threads that served News or Fundamentals
     fail_at: int | None = None                  # raise on this call, once
 
     @property
@@ -66,11 +66,6 @@ class ScriptedModel(BaseChatModel):
 
     def _generate(self, messages, stop=None, run_manager=None, **kwargs) -> ChatResult:
         self._count()
-        if str(messages[0].content).startswith(("You are the Fundamentals Analyst.", "You are the News Analyst.")):
-            import threading
-            import time
-            self.threads.add(threading.current_thread().name)
-            time.sleep(0.05)   # long enough for concurrent analysts to overlap
         if "Return only a JSON object" in str(messages[0].content):
             message = AIMessage(content='{"groups": ["rsi", "invalid-code"]}')
         else:
@@ -223,13 +218,56 @@ def test_a_graph_reused_across_runs_keeps_no_run_state(tmp_path, monkeypatch, of
 
 @pytest.mark.unit
 def test_the_analysts_run_at_the_same_time(tmp_path, monkeypatch, offline):
+    from tradingagents.graph import setup
+
+    expected = {'market', 'macro', 'news', 'fundamentals'}
+    entered, finished = set(), set()
+    rendezvous, lock = Barrier(len(expected)), Lock()
+
+    def observe_analyst(name, factory):
+        def create(llm):
+            agent = factory(llm)
+
+            def run(state):
+                with lock:
+                    entered.add(name)
+                # A serial graph cannot release the barrier. The timeout only
+                # bounds a broken test; elapsed time is never the assertion.
+                rendezvous.wait(timeout=10)
+                result = agent(state)
+                with lock:
+                    finished.add(name)
+                return result
+
+            return run
+
+        return create
+
+    for name in expected:
+        factory_name = f'create_{name}_analyst'
+        monkeypatch.setattr(setup, factory_name, observe_analyst(name, getattr(setup, factory_name)))
+
+    bull_factory = setup.create_bull_researcher
+
+    def observe_research(llm):
+        agent = bull_factory(llm)
+
+        def run(state):
+            with lock:
+                assert finished == expected
+            assert all(state[f'{name}_report'] for name in expected)
+            return agent(state)
+
+        return run
+
+    monkeypatch.setattr(setup, 'create_bull_researcher', observe_research)
     model = ScriptedModel()
     graph = _graph(tmp_path, monkeypatch, model)
 
     assert not [n for n in graph.graph.get_graph().nodes if n.startswith("Msg Clear")]
     graph.propagate("NVDA", TRADE_DATE)
 
-    assert len(model.threads) > 1
+    assert entered == finished == expected
 
 
 @pytest.mark.unit
