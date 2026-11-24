@@ -15,6 +15,15 @@ import pytest
 
 from deploy.personal import cd_pipeline as pipeline, deploy_host as host, deploy_request
 
+
+def test_only_versioning_commits_are_release_candidates():
+    from deploy.personal.cd_pipeline import is_version_commit
+
+    assert is_version_commit('chore: bump version to 0.8.1\n\nVersion-PR: #123\n')
+    assert is_version_commit('chore: initialize version 0.8.0\n\nVersion-PR: #1\n')
+    assert not is_version_commit('feat: add things (#123)')
+    assert not is_version_commit('chore: bump version to 0.8.1\n')
+
 SHA = "a" * 40
 OLD = host.REPOSITORY + "@sha256:" + "1" * 64
 DIGEST = "sha256:" + "2" * 64

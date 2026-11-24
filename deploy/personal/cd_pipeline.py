@@ -55,6 +55,12 @@ def validate_run(run, workflow_id, head_sha, artifacts, jobs):
             "tag": f"git-{run['head_sha']}-run-{run['id']}-{run['run_attempt']}"}
 
 
+def is_version_commit(message):
+    lines = message.splitlines()
+    return bool(lines and re.fullmatch(r'chore: (?:bump version to|initialize version) \d+\.\d+\.\d+', lines[0])
+                and any(re.fullmatch(r'Version-PR: #[1-9]\d*', line) for line in lines[1:]))
+
+
 def prepare(run_id):
     if not re.fullmatch(r"[0-9]+", run_id):
         raise ValueError("Invalid CI run ID")
@@ -65,6 +71,11 @@ def prepare(run_id):
     artifacts = github(f"{base}/actions/runs/{run_id}/artifacts?per_page=100")["artifacts"]
     jobs = github(f"{base}/actions/runs/{run_id}/attempts/{run['run_attempt']}/jobs?per_page=100")["jobs"]
     result = validate_run(run, workflow["id"], branch["object"]["sha"], artifacts, jobs)
+    if result is not None:
+        commit = github(f"{base}/commits/{result['sha']}")
+        if not is_version_commit(commit['commit']['message']):
+            print('Skipped: main is awaiting its version update.')
+            result = None
     with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
         output.write(f"eligible={'true' if result else 'false'}\n")
         for key, value in (result or {}).items():

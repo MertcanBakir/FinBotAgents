@@ -1,0 +1,57 @@
+name: Update version
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-version-main
+  queue: max
+
+jobs:
+  version:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check versioning credentials
+        env:
+          VERSIONING_TOKEN: ${{ secrets.VERSIONING_TOKEN }}
+        run: test -n "$VERSIONING_TOKEN" || { echo 'Configure VERSIONING_TOKEN before enabling automatic versioning.'; exit 1; }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.VERSIONING_TOKEN }}
+      - name: Update package and README versions
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            if git log --format=%B --fixed-strings --grep="Version-PR: #${PR_NUMBER}" | grep -Fxq "Version-PR: #${PR_NUMBER}"; then
+              echo 'This PR was already processed.'
+              exit 0
+            fi
+            # The PR that adds this workflow establishes the initial 0.8.0 version.
+            if git cat-file -e "${MERGE_SHA}^:.github/workflows/version.yml" 2>/dev/null; then
+              version=$(python3 deploy/personal/auto_version.py)
+              git add -u
+              git commit -m "chore: bump version to ${version}" -m "Version-PR: #${PR_NUMBER}"
+            else
+              git commit --allow-empty -m 'chore: initialize version 0.8.0' -m "Version-PR: #${PR_NUMBER}"
+            fi
+            if git push origin HEAD:main; then exit 0; fi
+          done
+          echo 'Could not update main after five attempts.' >&2
+          exit 1

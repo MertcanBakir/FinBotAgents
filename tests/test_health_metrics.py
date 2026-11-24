@@ -98,6 +98,7 @@ def test_health_keeps_public_contract_and_restricts_details_to_owner():
         auth.authenticate.assert_not_called()
         details = client.get('/healthz', headers={'Authorization': 'Bearer owner-token'})
         assert details.status_code == 200
+        assert details.json()['version'] == '0.8.0'
         assert details.json()['resources']['scope'] == 'host'
         assert details.json()['checks'] == {'api': 'ok'}
         auth.authenticate.return_value = uuid4()

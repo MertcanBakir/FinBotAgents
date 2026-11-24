@@ -20,6 +20,7 @@ Example after CPU sampling has warmed up (numbers are illustrative):
 ```json
 {
   "status": "ok",
+  "version": "0.8.0",
   "checks": {"api": "ok"},
   "resources": {
     "scope": "host",
