@@ -1,4 +1,4 @@
-# FinBotAgents — v0.8.1
+# FinBotAgents — v0.9.0
 
 ![FinBotAgents](tradingagents/assets/finbotagents.png)
 
