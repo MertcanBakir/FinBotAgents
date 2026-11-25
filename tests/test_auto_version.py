@@ -1,4 +1,5 @@
 import importlib.util
+import shutil
 from pathlib import Path
 
 import pytest
@@ -55,6 +56,7 @@ def test_ecr_tag_binds_version_to_run_and_commit():
         image_tag('bad tag', 'a' * 40, '123', '2')
 
 
+@pytest.mark.skipif(shutil.which('git') is None, reason='Git is not installed in the production worker image')
 def test_version_reader_extracts_the_version_from_the_exact_commit(tmp_path, monkeypatch):
     import subprocess
 
