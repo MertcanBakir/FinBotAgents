@@ -9,6 +9,7 @@ import os
 import re
 import subprocess
 import tarfile
+import tomllib
 import urllib.request
 from pathlib import Path
 
@@ -19,6 +20,34 @@ REGION = "eu-west-1"
 INSTANCE = "i-0cc2d47020ed7347c"
 DOCUMENT = "FinBotDeployTradingAgents"
 IMAGE = "tradingagents-worker:ci"
+
+
+def image_tag(version, sha, run_id, attempt):
+    if not (re.fullmatch(r"\d+\.\d+\.\d+", version)
+            and re.fullmatch(r"[0-9a-f]{40}", sha)
+            and re.fullmatch(r"[0-9]+", run_id)
+            and re.fullmatch(r"[0-9]+", attempt)):
+        raise ValueError("Invalid image version or provenance")
+    # The host's existing retention policy recognizes CI images by this prefix.
+    tag = f"git-{sha}-v{version}-run-{run_id}-{attempt}"
+    if len(tag) > 128:
+        raise ValueError("Image tag too long")
+    return tag
+
+
+def version_from_git(sha):
+    if not re.fullmatch(r"[0-9a-f]{40}", sha):
+        raise ValueError("Invalid source revision")
+    def read(path):
+        return subprocess.check_output(["git", "show", f"{sha}:{path}"], text=True)
+    config = tomllib.loads(read("pyproject.toml"))
+    attr = config["tool"]["setuptools"]["dynamic"]["version"]["attr"]
+    if not re.fullmatch(r"[A-Za-z_]\w*\.__version__", attr):
+        raise ValueError("Unsupported package version source")
+    matches = re.findall(r'^__version__ = "(\d+\.\d+\.\d+)"$', read(attr.split('.')[0] + "/__init__.py"), re.M)
+    if len(matches) != 1:
+        raise ValueError("Expected exactly one package version")
+    return matches[0]
 
 
 def github(path):
@@ -55,12 +84,6 @@ def validate_run(run, workflow_id, head_sha, artifacts, jobs):
             "tag": f"git-{run['head_sha']}-run-{run['id']}-{run['run_attempt']}"}
 
 
-def is_version_commit(message):
-    lines = message.splitlines()
-    return bool(lines and re.fullmatch(r'chore: (?:bump version to|initialize version) \d+\.\d+\.\d+', lines[0])
-                and any(re.fullmatch(r'Version-PR: #[1-9]\d*', line) for line in lines[1:]))
-
-
 def prepare(run_id):
     if not re.fullmatch(r"[0-9]+", run_id):
         raise ValueError("Invalid CI run ID")
@@ -71,11 +94,8 @@ def prepare(run_id):
     artifacts = github(f"{base}/actions/runs/{run_id}/artifacts?per_page=100")["artifacts"]
     jobs = github(f"{base}/actions/runs/{run_id}/attempts/{run['run_attempt']}/jobs?per_page=100")["jobs"]
     result = validate_run(run, workflow["id"], branch["object"]["sha"], artifacts, jobs)
-    if result is not None:
-        commit = github(f"{base}/commits/{result['sha']}")
-        if not is_version_commit(commit['commit']['message']):
-            print('Skipped: main is awaiting its version update.')
-            result = None
+    if result:
+        result["tag"] = image_tag(version_from_git(result["sha"]), result["sha"], result["run_id"], result["attempt"])
     with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
         output.write(f"eligible={'true' if result else 'false'}\n")
         for key, value in (result or {}).items():

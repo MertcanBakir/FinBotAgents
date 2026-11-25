@@ -35,3 +35,75 @@ def test_refuses_mismatched_readme(tmp_path):
     with pytest.raises(ValueError):
         module.update_files(package, readme, 'fix: fix')
     assert package.read_text() == '__version__ = "0.8.0"\n'
+
+
+def test_pr_target_is_derived_from_base_not_previous_attempt():
+    assert module.next_version('0.8.0', 'feat: one') == '0.9.0'
+    assert module.next_version('0.8.0', 'fix: one') == '0.8.1'
+
+
+def test_render_accepts_already_versioned_pr_without_bumping_again():
+    package, readme = module.render('0.8.0', 'feat: one', '__version__ = "0.9.0"\n', '# FinBotAgents — v0.9.0\n')
+    assert package == '__version__ = "0.9.0"\n'
+    assert readme == '# FinBotAgents — v0.9.0\n'
+
+
+def test_ecr_tag_binds_version_to_run_and_commit():
+    from deploy.personal.cd_pipeline import image_tag
+    assert image_tag('0.8.1', 'a' * 40, '123', '2') == f'git-{"a" * 40}-v0.8.1-run-123-2'
+    with pytest.raises(ValueError):
+        image_tag('bad tag', 'a' * 40, '123', '2')
+
+
+def test_version_reader_extracts_the_version_from_the_exact_commit(tmp_path, monkeypatch):
+    import subprocess
+
+    from deploy.personal.cd_pipeline import version_from_git
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(['git', 'init', '-q'], check=True)
+    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], check=True)
+    subprocess.run(['git', 'config', 'user.name', 'Test'], check=True)
+    Path('pyproject.toml').write_text('[tool.setuptools.dynamic]\nversion = {attr = "pkg.__version__"}\n')
+    Path('pkg').mkdir()
+    Path('pkg/__init__.py').write_text('__version__ = "0.8.1"\n')
+    subprocess.run(['git', 'add', '.'], check=True)
+    subprocess.run(['git', 'commit', '-qm', 'test'], check=True)
+    sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+    Path('pkg/__init__.py').write_text('__version__ = "0.9.0"\n')
+    assert version_from_git(sha) == '0.8.1'
+
+
+def test_pr_update_uses_base_version_and_updates_only_version_files(monkeypatch):
+    import base64
+
+    project = '[tool.setuptools.dynamic]\nversion = {attr = "tradingagents.__version__"}\n'
+    files = {
+        ('pyproject.toml', 'a' * 40): project,
+        ('pyproject.toml', 'b' * 40): project,
+        ('tradingagents/__init__.py', 'a' * 40): '__version__ = "0.8.0"\n',
+        ('tradingagents/__init__.py', 'b' * 40): '__version__ = "0.8.0"\n',
+        ('README.md', 'b' * 40): '# FinBotAgents — v0.8.0\n',
+    }
+    requests = []
+    def api(path, token, method='GET', data=None):
+        requests.append((path, method, data))
+        if '/pulls/' in path:
+            return {'state': 'open', 'base': {'ref': 'main', 'sha': 'a' * 40},
+                    'head': {'ref': 'feature', 'sha': 'b' * 40, 'repo': {'full_name': 'owner/repo'}},
+                    'title': 'feat: new feature'}
+        if '/contents/' in path:
+            filename, sha = path.split('/contents/')[1].split('?ref=')
+            return {'encoding': 'base64', 'content': base64.b64encode(files[(filename, sha)].encode()).decode()}
+        if method == 'GET':
+            return {'tree': {'sha': 'tree'}}
+        if path.endswith('/git/trees'):
+            return {'sha': 'newtree'}
+        if path.endswith('/git/commits'):
+            return {'sha': 'newcommit'}
+        return {}
+    monkeypatch.setattr(module, 'github_api', api)
+    module.update_pull_request('owner/repo', '12', 'test')
+    tree = next(data for path, method, data in requests if path.endswith('/git/trees'))
+    assert {item['path'] for item in tree['tree']} == {'README.md', 'tradingagents/__init__.py'}
+    assert all('0.9.0' in item['content'] for item in tree['tree'])
+    assert requests[-1][2] == {'sha': 'newcommit', 'force': False}

@@ -6,17 +6,18 @@ FinBotAgents is the financial analysis backend for Lucrari. It runs a multi-agen
 
 ## Versioning
 
-Merged PRs update the package and README versions: `feat:` and `feat!:` or
-`fix!:` increase the minor version; other titles increase the patch version.
-The owner-authenticated `/healthz` response reports the running package version.
+The version workflow updates the PR branch from the current main version:
+`feat:` and `feat!:` or `fix!:` increase the minor version; other titles increase
+the patch version. CI checks both the package version and README heading. ECR
+image tags include that version and the exact source commit and CI run.
 
-The version workflow requires a repository secret `VERSIONING_TOKEN` from a
-dedicated GitHub App or fine-grained token with repository contents read/write
-access and permission to update `main`. Its commits must trigger Actions; the
-default `GITHUB_TOKEN` cannot do that. Configure branch protection to allow the
-versioning identity to push. If the workflow fails, rerun it after resolving
-the error; CD deliberately skips commits that do not contain a version update.
-The queue holds up to 100 pending runs. PR titles determine the version bump.
+Install a GitHub App on this repository with Contents read/write and Pull requests
+read permission. Configure the repository variable `VERSIONING_APP_CLIENT_ID`
+and secret `VERSIONING_APP_PRIVATE_KEY`. Only same-repository PR branches are
+updated automatically. Configure `main` protection to require the `CI passed`
+check and an up-to-date branch; external PRs need their version updated manually.
+If App setup is incomplete, version checks fail until the PR is updated. The
+existing production deployment continues to use immutable image digests.
 
 ## How it works
 

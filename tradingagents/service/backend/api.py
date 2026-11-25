@@ -8,8 +8,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from tradingagents import __version__
-
 from ..errors import AnalysisServiceError
 from .contracts import ConnectionInput, StartAnalysis
 from .health import ResourceMonitor
@@ -120,7 +118,7 @@ def create_app(*, repository, authenticator, vault, probe, storage, dispatcher: 
         user_id = identity(credentials)
         if user_id != repository.settings.personal_user_id:
             raise AnalysisServiceError("ACCESS_DENIED")
-        return {"status": "ok", "version": __version__, "checks": {"api": "ok"}, "resources": monitor.snapshot()}
+        return {"status": "ok", "checks": {"api": "ok"}, "resources": monitor.snapshot()}
 
     @app.get("/v1/providers")
     def providers(user_id: User):
