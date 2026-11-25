@@ -107,3 +107,32 @@ def test_pr_update_uses_base_version_and_updates_only_version_files(monkeypatch)
     assert {item['path'] for item in tree['tree']} == {'README.md', 'tradingagents/__init__.py'}
     assert all('0.9.0' in item['content'] for item in tree['tree'])
     assert requests[-1][2] == {'sha': 'newcommit', 'force': False}
+
+
+def test_candidate_tag_uses_version_from_validated_commit(tmp_path, monkeypatch):
+    from deploy.personal import cd_pipeline as pipeline
+
+    sha = 'a' * 40
+    run = {'repository': {'full_name': pipeline.REPOSITORY},
+           'head_repository': {'full_name': pipeline.REPOSITORY}, 'workflow_id': 10,
+           'event': 'push', 'head_branch': 'main', 'status': 'completed', 'conclusion': 'success',
+           'head_sha': sha, 'id': 100, 'run_attempt': 2}
+    def api(path):
+        if path.endswith('/actions/runs/100'):
+            return run
+        if path.endswith('/actions/workflows/ci.yml'):
+            return {'id': 10}
+        if path.endswith('/git/ref/heads/main'):
+            return {'object': {'sha': sha}}
+        if '/artifacts?' in path:
+            return {'artifacts': [{'name': f'worker-image-{sha}-2', 'expired': False}]}
+        if '/jobs?' in path:
+            return {'jobs': [{'name': 'CI passed', 'conclusion': 'success'}]}
+        raise AssertionError(path)
+    monkeypatch.setattr(pipeline, 'github', api)
+    monkeypatch.setattr(pipeline, 'version_from_git', lambda ref: '0.8.1' if ref == sha else 'wrong')
+    output = tmp_path / 'output'
+    monkeypatch.setenv('GITHUB_OUTPUT', str(output))
+    pipeline.prepare('100')
+    assert f'tag=git-{sha}-v0.8.1-run-100-2' in output.read_text()
+
