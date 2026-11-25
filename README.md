@@ -1,8 +1,23 @@
-# FinBotAgents
+# FinBotAgents — v0.8.0
 
 ![FinBotAgents](tradingagents/assets/finbotagents.png)
 
 FinBotAgents is the financial analysis backend for Lucrari. It runs a multi-agent research workflow and returns a structured report that the mobile app can display.
+
+## Versioning
+
+The version workflow updates the PR branch from the current main version:
+`feat:` and `feat!:` or `fix!:` increase the minor version; other titles increase
+the patch version. CI checks both the package version and README heading. ECR
+image tags include that version and the exact source commit and CI run.
+
+Install a GitHub App on this repository with Contents read/write and Pull requests
+read permission. Configure the repository variable `VERSIONING_APP_CLIENT_ID`
+and secret `VERSIONING_APP_PRIVATE_KEY`. Only same-repository PR branches are
+updated automatically. Configure `main` protection to require the `CI passed`
+check and an up-to-date branch; external PRs need their version updated manually.
+If App setup is incomplete, version checks fail until the PR is updated. The
+existing production deployment continues to use immutable image digests.
 
 ## How it works
 
