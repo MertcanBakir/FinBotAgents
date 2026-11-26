@@ -14,24 +14,24 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-from tests.test_hosted_backend import settings, worker_result
-from tradingagents.service.backend.api import create_app
-from tradingagents.service.backend.contracts import StartAnalysis
-from tradingagents.service.backend.personal import (
+from finbotagents.service.backend.api import create_app
+from finbotagents.service.backend.contracts import StartAnalysis
+from finbotagents.service.backend.personal import (
     DatabaseDispatcher,
     configure_auth,
     execution_guard,
     manage_session,
 )
-from tradingagents.service.backend.security import SupabaseAuthenticator
-from tradingagents.service.errors import AnalysisServiceError
+from finbotagents.service.backend.security import SupabaseAuthenticator
+from finbotagents.service.errors import AnalysisServiceError
+from tests.test_hosted_backend import settings, worker_result
 
 OWNER = UUID("00000000-0000-4000-8000-000000000001")
 
 
 @pytest.fixture(autouse=True)
 def isolate_auth_module(monkeypatch):
-    from tradingagents.llm_clients import chatgpt_auth
+    from finbotagents.llm_clients import chatgpt_auth
 
     monkeypatch.setattr(chatgpt_auth, "AUTH_FILE", chatgpt_auth.AUTH_FILE)
 
@@ -218,9 +218,9 @@ def test_execution_guard_rejects_overlapping_child(tmp_path):
 
 
 def test_personal_child_reuses_upstream_callable_without_any_llm_api_key(tmp_path, monkeypatch):
-    from tradingagents.llm_clients import chatgpt_auth
-    from tradingagents.llm_clients.api_key_env import PROVIDER_API_KEY_ENV
-    from tradingagents.service.backend import worker
+    from finbotagents.llm_clients import chatgpt_auth
+    from finbotagents.llm_clients.api_key_env import PROVIDER_API_KEY_ENV
+    from finbotagents.service.backend import worker
 
     s = personal_settings(tmp_path)
     write_record(s.personal_chatgpt_auth_file, session_record())
@@ -255,7 +255,7 @@ def test_personal_child_reuses_upstream_callable_without_any_llm_api_key(tmp_pat
     def run(request, **kwargs):
         import os
 
-        from tradingagents.llm_clients.openai_client import _chatgpt_credential
+        from finbotagents.llm_clients.openai_client import _chatgpt_credential
 
         assert _chatgpt_credential()() == "PRIVATE_ACCESS"
         assert all(key not in os.environ for key in PROVIDER_API_KEY_ENV.values() if key)
@@ -273,7 +273,7 @@ def test_personal_child_reuses_upstream_callable_without_any_llm_api_key(tmp_pat
 
 
 def test_settings_file_and_invalid_permissions_fail_without_secret_echo(tmp_path, monkeypatch):
-    from tradingagents.service.backend.runtime import settings_from_env
+    from finbotagents.service.backend.runtime import settings_from_env
 
     path = tmp_path / "settings.json"
     s = personal_settings(tmp_path)
@@ -316,7 +316,7 @@ def test_upstream_rotation_is_persisted_once_across_concurrent_callers(tmp_path,
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier
 
-    from tradingagents.llm_clients import chatgpt_auth
+    from finbotagents.llm_clients import chatgpt_auth
 
     s = personal_settings(tmp_path)
     record = session_record()
@@ -353,7 +353,7 @@ def test_upstream_rotation_is_persisted_once_across_concurrent_callers(tmp_path,
 def test_persistent_worker_discovers_committed_job_and_stops_safely(tmp_path, monkeypatch):
     import signal
 
-    from tradingagents.service.backend import runtime, worker
+    from finbotagents.service.backend import runtime, worker
 
     repo = MagicMock()
     repo.settings = personal_settings(tmp_path)
@@ -381,7 +381,7 @@ def test_persistent_worker_discovers_committed_job_and_stops_safely(tmp_path, mo
     auth.list_models.return_value = [("GPT Dynamic", "gpt-dynamic")]
     monkeypatch.setattr(runtime, "configure_auth", MagicMock(), raising=False)
     monkeypatch.setattr(
-        "tradingagents.service.backend.personal.configure_auth", MagicMock(return_value=auth)
+        "finbotagents.service.backend.personal.configure_auth", MagicMock(return_value=auth)
     )
     assert runtime.serve(repo) == 0
     instance.run.assert_called_once_with(job)
@@ -392,8 +392,8 @@ def test_persistent_worker_discovers_committed_job_and_stops_safely(tmp_path, mo
 
 
 def test_second_worker_daemon_cannot_start(tmp_path):
-    from tradingagents.dataflows.files import locked
-    from tradingagents.service.backend.runtime import serve
+    from finbotagents.dataflows.files import locked
+    from finbotagents.service.backend.runtime import serve
 
     repo = MagicMock()
     repo.settings = personal_settings(tmp_path)

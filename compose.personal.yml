@@ -26,7 +26,7 @@ x-backend: &backend
 services:
   api:
     <<: *backend
-    entrypoint: [uvicorn, tradingagents.service.backend.runtime:application, --factory, --host, 0.0.0.0, --port, "8000", --no-access-log]
+    entrypoint: [uvicorn, finbotagents.service.backend.runtime:application, --factory, --host, 0.0.0.0, --port, "8000", --no-access-log]
     environment:
       LUCRARI_BACKEND_SETTINGS_FILE: /run/private/settings.json
       LUCRARI_DISPATCHER: database
@@ -44,7 +44,7 @@ services:
       FRED_API_KEY: ${FRED_API_KEY:-}
       FMP_API_KEY: ${FMP_API_KEY:-}
       SEC_EDGAR_USER_AGENT: ${SEC_EDGAR_USER_AGENT:-}
-    entrypoint: [python, -m, tradingagents.service.backend.runtime]
+    entrypoint: [python, -m, finbotagents.service.backend.runtime]
     command: [serve-worker]
     stop_grace_period: 40s
     volumes:
@@ -52,7 +52,7 @@ services:
       - ${LUCRARI_PRIVATE_DIR}/chatgpt:/run/chatgpt
   maintenance:
     <<: *backend
-    entrypoint: [python, -m, tradingagents.service.backend.runtime]
+    entrypoint: [python, -m, finbotagents.service.backend.runtime]
     command: [maintain]
     volumes:
       - ${LUCRARI_PRIVATE_DIR}/settings.json:/run/private/settings.json:ro

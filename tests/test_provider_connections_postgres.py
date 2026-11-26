@@ -9,13 +9,13 @@ import pytest
 
 from deploy.personal.migrate import require_backend_schema
 from deploy.transitions.reset_provider_backend import CONFIRMATION, SQL_FILE, transition
+from finbotagents.service.backend.contracts import StartAnalysis
+from finbotagents.service.backend.repository import Repository
+from finbotagents.service.backend.security import SecretVault
+from finbotagents.service.errors import AnalysisServiceError
 from tests import test_database_migrations_postgres as migration_fixtures
 from tests.test_hosted_backend import settings
 from tests.test_provider_connections import api_body
-from tradingagents.service.backend.contracts import StartAnalysis
-from tradingagents.service.backend.repository import Repository
-from tradingagents.service.backend.security import SecretVault
-from tradingagents.service.errors import AnalysisServiceError
 
 pytestmark = pytest.mark.integration
 
@@ -410,10 +410,10 @@ def test_user_deletion_cascades_without_deleting_another_users_connections(db):
 def test_real_db_child_resolves_mixed_provider_keys_without_leaking_to_config_or_output(
     db, tmp_path, monkeypatch
 ):
+    from finbotagents.llm_clients.tier_credentials import credential_for
+    from finbotagents.service.backend import worker
+    from finbotagents.service.memory import MemoryDecision
     from tests.test_hosted_backend import worker_result
-    from tradingagents.llm_clients.tier_credentials import credential_for
-    from tradingagents.service.backend import worker
-    from tradingagents.service.memory import MemoryDecision
 
     row, _ = reserve(db)
     claimed = db.repo.claim(row["id"])
@@ -451,7 +451,7 @@ def test_real_db_child_resolves_mixed_provider_keys_without_leaking_to_config_or
 
 
 def test_revocation_between_reservation_and_child_never_constructs_model(db, tmp_path, monkeypatch):
-    from tradingagents.service.backend import worker
+    from finbotagents.service.backend import worker
 
     row, _ = reserve(db)
     claimed = db.repo.claim(row["id"])
@@ -467,8 +467,8 @@ def test_packaged_migration_check_requires_v2_before_any_ledger_write(
     baseline_database, monkeypatch, capsys
 ):
     from deploy.personal import migrate
+    from finbotagents.service.backend import runtime
     from tests.test_database_migrations import SOURCE
-    from tradingagents.service.backend import runtime
 
     conn, dsn = baseline_database
     monkeypatch.setattr(runtime, "settings_from_env", lambda: settings(database_url=dsn))

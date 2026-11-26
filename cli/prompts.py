@@ -11,11 +11,11 @@ from rich.markup import escape
 
 from cli.display import console
 from cli.models import AnalystType, AssetType
-from tradingagents.dataflows.symbols import safe_ticker_component
-from tradingagents.horizons import HORIZON_LABELS, AnalysisHorizon
-from tradingagents.llm_clients.api_key_env import get_api_key_env
-from tradingagents.llm_clients.model_catalog import get_model_options
-from tradingagents.llm_clients.openai_client import OPENAI_COMPATIBLE_PROVIDERS, SIGNED_IN_PROVIDERS
+from finbotagents.dataflows.symbols import safe_ticker_component
+from finbotagents.horizons import HORIZON_LABELS, AnalysisHorizon
+from finbotagents.llm_clients.api_key_env import get_api_key_env
+from finbotagents.llm_clients.model_catalog import get_model_options
+from finbotagents.llm_clients.openai_client import OPENAI_COMPATIBLE_PROVIDERS, SIGNED_IN_PROVIDERS
 
 TICKER_INPUT_EXAMPLES = "SPY, 0700.HK, BTC-USD"
 
@@ -125,7 +125,7 @@ def normalize_ticker_symbol(ticker: str) -> str:
     plain upper-case if the data layer is unavailable.
     """
     try:
-        from tradingagents.dataflows.symbols import normalize_symbol
+        from finbotagents.dataflows.symbols import normalize_symbol
 
         return normalize_symbol(ticker)
     except Exception:
@@ -273,7 +273,7 @@ def _fetch_openrouter_models() -> list[tuple[str, str]]:
 
 def select_chatgpt_model(mode: str, default=None) -> str:
     """Select one of the ChatGPT plan's models, or enter a model ID."""
-    from tradingagents.llm_clients import chatgpt_auth
+    from finbotagents.llm_clients import chatgpt_auth
     try:
         models = chatgpt_auth.list_models()
     except Exception as e:
@@ -651,7 +651,7 @@ def ensure_signed_in(provider: str) -> None:
     read of a pasted address ends with it and never takes a later answer."""
     if provider.lower() not in SIGNED_IN_PROVIDERS:
         return
-    from tradingagents.llm_clients import chatgpt_auth  # the one signed-in provider
+    from finbotagents.llm_clients import chatgpt_auth  # the one signed-in provider
 
     try:
         chatgpt_auth.access_token()

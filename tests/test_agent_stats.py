@@ -5,8 +5,8 @@ from uuid import uuid4
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.outputs import ChatGeneration, LLMResult
 
-from tradingagents.agent_stats import AgentStats, AgentStatsHandler, render_agent_stats, track_data
-from tradingagents.reporting import write_report_tree
+from finbotagents.agent_stats import AgentStats, AgentStatsHandler, render_agent_stats, track_data
+from finbotagents.reporting import write_report_tree
 
 
 def node(handler, name):

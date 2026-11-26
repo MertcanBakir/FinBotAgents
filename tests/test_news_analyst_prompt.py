@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 from langchain_core.messages import AIMessage
 
-from tradingagents.agents.analysts import macro_analyst, news_analyst
+from finbotagents.agents.analysts import macro_analyst, news_analyst
 
 
 def test_news_collects_social_for_thirty_days_and_calls_model_once(monkeypatch):
@@ -74,7 +74,7 @@ def test_model_failure_does_not_trigger_a_second_call(monkeypatch, module, facto
 
 
 def test_sector_news_does_not_also_search_global_queries(monkeypatch):
-    from tradingagents.dataflows.vendors.yahoo import news
+    from finbotagents.dataflows.vendors.yahoo import news
     queries = []
 
     class Search:

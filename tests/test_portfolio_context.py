@@ -13,8 +13,8 @@ import json
 
 import pytest
 
-from tradingagents.agents.context import get_portfolio_context_from_state
-from tradingagents.portfolio import PortfolioContext, load_portfolio
+from finbotagents.agents.context import get_portfolio_context_from_state
+from finbotagents.portfolio import PortfolioContext, load_portfolio
 
 HOLDING = {
     "cash": 25000.0,
@@ -120,9 +120,9 @@ def test_load_reads_a_valid_file(tmp_path):
 # --- threading through the graph --------------------------------------------
 
 def _bare_graph(tmp_path):
-    from tradingagents.graph.propagation import Propagator
-    from tradingagents.graph.trading_graph import TradingAgentsGraph
-    from tradingagents.memory import TradingMemoryLog
+    from finbotagents.graph.propagation import Propagator
+    from finbotagents.graph.trading_graph import TradingAgentsGraph
+    from finbotagents.memory import TradingMemoryLog
 
     graph = object.__new__(TradingAgentsGraph)
     graph.config = {"analysis_horizon": "medium_3m", "memory_log_path": str(tmp_path / "m.md"), "max_debate_rounds": 1,
@@ -155,11 +155,11 @@ def test_checkpoint_signature_changes_with_the_portfolio(tmp_path):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("module, factory", [
-    ("tradingagents.agents.trader.trader", "create_trader"),
-    ("tradingagents.agents.managers.portfolio_manager", "create_portfolio_manager"),
-    ("tradingagents.agents.risk_mgmt.aggressive_debator", "create_aggressive_debator"),
-    ("tradingagents.agents.risk_mgmt.conservative_debator", "create_conservative_debator"),
-    ("tradingagents.agents.risk_mgmt.neutral_debator", "create_neutral_debator"),
+    ("finbotagents.agents.trader.trader", "create_trader"),
+    ("finbotagents.agents.managers.portfolio_manager", "create_portfolio_manager"),
+    ("finbotagents.agents.risk_mgmt.aggressive_debator", "create_aggressive_debator"),
+    ("finbotagents.agents.risk_mgmt.conservative_debator", "create_conservative_debator"),
+    ("finbotagents.agents.risk_mgmt.neutral_debator", "create_neutral_debator"),
 ])
 def test_decision_agents_see_the_portfolio(module, factory, monkeypatch):
     """The prompt each decision agent sends carries the portfolio block."""
@@ -199,7 +199,7 @@ def test_decision_agents_see_the_portfolio(module, factory, monkeypatch):
 def test_research_team_stays_blind_to_the_portfolio():
     import inspect
 
-    from tradingagents.agents.researchers import bear_researcher, bull_researcher
+    from finbotagents.agents.researchers import bear_researcher, bull_researcher
     for mod in (bull_researcher, bear_researcher):
         assert "portfolio_context" not in inspect.getsource(mod)
 
@@ -211,12 +211,12 @@ def test_completed_run_clears_the_checkpoint_it_wrote(tmp_path, monkeypatch):
     Keyed on a different one it deletes nothing, and the next identical call
     resumes the finished thread and returns the old decision without running.
     """
-    import tradingagents.graph.trading_graph as tg
+    import finbotagents.graph.trading_graph as tg
 
     graph = _bare_graph(tmp_path)
     graph.config.update({"checkpoint_enabled": True, "data_cache_dir": str(tmp_path),
                          "results_dir": str(tmp_path)})
-    from tradingagents.agent_stats import AgentStatsHandler
+    from finbotagents.agent_stats import AgentStatsHandler
 
     graph.agent_stats = AgentStatsHandler()
     graph.debug = False
@@ -239,7 +239,7 @@ def test_completed_run_clears_the_checkpoint_it_wrote(tmp_path, monkeypatch):
 def test_research_layer_sizes_against_a_standard_allocation():
     """The research team is blind to the book, so its plan cannot promise
     position-relative sizing: it sizes against a standard allocation instead."""
-    from tradingagents.agents.schemas import ResearchPlan
+    from finbotagents.agents.schemas import ResearchPlan
 
     description = ResearchPlan.model_fields["strategic_actions"].description
     assert "standard allocation" in description

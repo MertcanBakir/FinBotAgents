@@ -19,7 +19,7 @@ ECR_REPOSITORY = "lucrari/tradingagents-personal"
 REGION = "eu-west-1"
 INSTANCE = "i-0cc2d47020ed7347c"
 DOCUMENT = "FinBotDeployTradingAgents"
-IMAGE = "tradingagents-worker:ci"
+IMAGE = "finbotagents-worker:ci"
 
 
 def image_tag(version, sha, run_id, attempt):

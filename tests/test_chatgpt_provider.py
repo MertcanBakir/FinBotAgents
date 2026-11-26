@@ -15,9 +15,9 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 import cli.prompts as prompts
 import cli.selections as selections
-from tradingagents import default_config
-from tradingagents.llm_clients import chatgpt_auth, factory
-from tradingagents.llm_clients.openai_client import ChatGPTPlanChatOpenAI
+from finbotagents import default_config
+from finbotagents.llm_clients import chatgpt_auth, factory
+from finbotagents.llm_clients.openai_client import ChatGPTPlanChatOpenAI
 
 
 @pytest.fixture
@@ -58,7 +58,7 @@ def test_system_instructions_go_as_developer_and_refused_settings_are_dropped(si
 @pytest.mark.unit
 def test_a_run_without_a_sign_in_stops_before_any_request(monkeypatch, tmp_path):
     monkeypatch.setattr(chatgpt_auth, "AUTH_FILE", tmp_path / "chatgpt-auth.json")
-    with pytest.raises(chatgpt_auth.ChatGPTAuthError, match="tradingagents login chatgpt"):
+    with pytest.raises(chatgpt_auth.ChatGPTAuthError, match="finbotagents login chatgpt"):
         _llm()
 
 
@@ -241,5 +241,5 @@ def test_a_remembered_openrouter_model_is_preselected(monkeypatch):
 def test_the_chatgpt_plan_is_the_only_provider_signed_in_to():
     # `login`, `logout` and the pre-run check are wired to the ChatGPT sign-in; a
     # second signed-in provider needs its own sign-in wired into them first.
-    from tradingagents.llm_clients.openai_client import SIGNED_IN_PROVIDERS
+    from finbotagents.llm_clients.openai_client import SIGNED_IN_PROVIDERS
     assert SIGNED_IN_PROVIDERS == ("chatgpt",)

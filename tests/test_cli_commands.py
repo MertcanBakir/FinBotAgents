@@ -187,7 +187,7 @@ def test_backtest_refuses_a_selection_before_the_sweep(runner, monkeypatch, args
 
 @pytest.mark.unit
 def test_login_and_logout_chatgpt_do_not_run_an_analysis(runner, monkeypatch):
-    from tradingagents.llm_clients import chatgpt_auth
+    from finbotagents.llm_clients import chatgpt_auth
 
     monkeypatch.setattr(chatgpt_auth, "sign_in", lambda say: "a@example.com")
     monkeypatch.setattr(chatgpt_auth, "sign_out", lambda: "revoked")
@@ -201,7 +201,7 @@ def test_login_and_logout_chatgpt_do_not_run_an_analysis(runner, monkeypatch):
 
 @pytest.mark.unit
 def test_a_failed_login_exits_with_the_reason(runner, monkeypatch):
-    from tradingagents.llm_clients import chatgpt_auth
+    from finbotagents.llm_clients import chatgpt_auth
 
     def refuse(say):
         raise chatgpt_auth.ChatGPTAuthError("Signing in with ChatGPT timed out")
@@ -216,7 +216,7 @@ def test_a_failed_login_exits_with_the_reason(runner, monkeypatch):
     (None, "Not signed in"), ("forgotten", "could not be reached to revoke"),
 ])
 def test_logout_says_whether_openai_revoked_the_sign_in(runner, monkeypatch, outcome, said):
-    from tradingagents.llm_clients import chatgpt_auth
+    from finbotagents.llm_clients import chatgpt_auth
 
     monkeypatch.setattr(chatgpt_auth, "sign_out", lambda: outcome)
     result = runner.invoke(m.app, ["logout", "chatgpt"])
@@ -225,7 +225,7 @@ def test_logout_says_whether_openai_revoked_the_sign_in(runner, monkeypatch, out
 
 @pytest.mark.unit
 def test_a_failure_message_with_brackets_is_printed_as_text(runner, monkeypatch):
-    from tradingagents.llm_clients import chatgpt_auth
+    from finbotagents.llm_clients import chatgpt_auth
 
     def refuse(say):
         raise chatgpt_auth.ChatGPTAuthError("ChatGPT sign-in failed ([/bogus]); sign in again.")

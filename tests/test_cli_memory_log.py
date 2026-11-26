@@ -12,8 +12,8 @@ from __future__ import annotations
 import pytest
 
 import cli.run as cli_run
-from tradingagents.graph.trading_graph import TradingAgentsGraph
-from tradingagents.memory import TradingMemoryLog
+from finbotagents.graph.trading_graph import TradingAgentsGraph
+from finbotagents.memory import TradingMemoryLog
 
 
 def _bare_graph(tmp_path):
@@ -49,7 +49,7 @@ class _FakeGraph:
         self.calls = []
         self.graph = self
         self.propagator = self
-        from tradingagents.agent_stats import AgentStatsHandler
+        from finbotagents.agent_stats import AgentStatsHandler
 
         self.agent_stats = AgentStatsHandler()
         self.resuming = resuming      # None: checkpointing off
@@ -125,7 +125,7 @@ def _run_cli(monkeypatch, tmp_path, fake):
     from cli.models import AnalystType
 
     buffer = _FakeBuffer()
-    monkeypatch.setattr(cli_run, "TradingAgentsGraph", lambda *a, **k: fake)
+    monkeypatch.setattr(cli_run, "FinBotAgentsGraph", lambda *a, **k: fake)
     monkeypatch.setattr(cli_run, "message_buffer", buffer)
     monkeypatch.setattr(cli_run, "create_layout", lambda: None)
     monkeypatch.setattr(cli_run, "update_display", lambda *a, **k: None)
@@ -171,6 +171,40 @@ def test_a_run_without_checkpointing_says_nothing_about_resuming(tmp_path, monke
     buffer = _run_cli(monkeypatch, tmp_path, _FakeGraph())
 
     assert not any("resum" in text.lower() or "fresh" in text.lower() for _, _, text in buffer.messages)
+
+
+def test_cli_stream_handles_messages_debates_and_each_team(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from langchain_core.messages import HumanMessage
+
+    class StreamGraph(_FakeGraph):
+        def stream_run(self, graph_input, **kwargs):
+            message = HumanMessage(content="read this", id="duplicate")
+            tool_message = SimpleNamespace(
+                content="tool call", id=None,
+                tool_calls=[{"name": "lookup", "args": {"ticker": "NVDA"}},
+                            SimpleNamespace(name="news", args={"limit": 2})],
+            )
+            yield [message, message, tool_message], None
+            yield [], {"market_report": "Market analysis"}
+            yield [], {"investment_debate_state": {"bull_history": "bull", "bear_history": "bear"}}
+            yield [], {"investment_debate_state": {"bull_history": "bull", "bear_history": "bear"},
+                       "investment_plan": "research decision"}
+            yield [], {"trader_investment_plan": "trading plan"}
+            yield [], {"trader_investment_plan": "updated plan"}
+            risk = {"aggressive_history": "aggressive", "conservative_history": "conservative",
+                    "neutral_history": "neutral"}
+            yield [], {"risk_debate_state": risk}
+            yield [], {"risk_debate_state": risk, "final_trade_decision": "Rating: Buy\n\nBuy NVDA.",
+                       "final_rating": "Buy"}
+            yield [], {"risk_debate_state": risk, "final_trade_decision": "Rating: Buy\n\nBuy NVDA."}
+
+    graph = StreamGraph()
+    buffer = _run_cli(monkeypatch, tmp_path, graph)
+    assert sum(content == "read this" for _, _, content in buffer.messages) == 1
+    assert [name for _, name, _ in buffer.tool_calls] == ["lookup", "news"]
+    assert ("record_decision", "NVDA", "2026-01-10", "Rating: Buy\n\nBuy NVDA.") in graph.calls
 
 
 @pytest.mark.unit

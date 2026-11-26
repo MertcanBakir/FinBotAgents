@@ -6,8 +6,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from tradingagents.graph.trading_graph import TradingAgentsGraph
-from tradingagents.reporting import write_report_tree
+from finbotagents.graph.trading_graph import TradingAgentsGraph
+from finbotagents.reporting import write_report_tree
 
 
 def _state():
@@ -118,7 +118,7 @@ def test_the_report_names_the_analysis_date_and_what_produced_it(tmp_path):
 
 @pytest.mark.unit
 def test_run_settings_record_the_run_without_endpoints_or_paths():
-    from tradingagents.graph.trading_graph import TradingAgentsGraph
+    from finbotagents.graph.trading_graph import TradingAgentsGraph
 
     graph = object.__new__(TradingAgentsGraph)
     graph.selected_analysts = ("market", "news")
@@ -142,12 +142,12 @@ def test_a_partial_settings_dict_still_writes_the_report(tmp_path):
 
 @pytest.mark.unit
 def test_run_settings_name_the_version_of_the_running_code():
-    import tradingagents
-    from tradingagents.graph.trading_graph import TradingAgentsGraph
+    import finbotagents
+    from finbotagents.graph.trading_graph import TradingAgentsGraph
 
     graph = object.__new__(TradingAgentsGraph)
     graph.selected_analysts, graph.config = ("market",), {}
-    assert graph.run_settings()["version"] == tradingagents.__version__
+    assert graph.run_settings()["version"] == finbotagents.__version__
 
 
 @pytest.mark.unit

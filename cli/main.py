@@ -9,11 +9,11 @@ from cli.display import console
 from cli.models import AnalystType, AssetType
 from cli.prompts import filter_analysts_for_asset_type, parse_analysts
 from cli.run import run_analysis
-from tradingagents.backtest import iter_grid, run_backtest, summarize
-from tradingagents.default_config import DEFAULT_CONFIG
-from tradingagents.horizons import parse_analysis_horizon
-from tradingagents.llm_clients.openai_client import SIGNED_IN_PROVIDERS
-from tradingagents.portfolio import load_portfolio
+from finbotagents.backtest import iter_grid, run_backtest, summarize
+from finbotagents.default_config import DEFAULT_CONFIG
+from finbotagents.horizons import parse_analysis_horizon
+from finbotagents.llm_clients.openai_client import SIGNED_IN_PROVIDERS
+from finbotagents.portfolio import load_portfolio
 
 # prompt_toolkit's win32 output module is importable only on Windows (it asserts
 # the platform at import time), so gate on the platform rather than catching the
@@ -41,7 +41,7 @@ def analyze(
         None,
         "--checkpoint/--no-checkpoint",
         help="Enable/disable checkpoint-resume (save state after each node so a "
-        "crashed run can resume). Omit to honor TRADINGAGENTS_CHECKPOINT_ENABLED.",
+        "crashed run can resume). Omit to honor FINBOTAGENTS_CHECKPOINT_ENABLED.",
     ),
     clear_checkpoints: bool = typer.Option(
         False,
@@ -79,7 +79,7 @@ def analyze(
     if ctx.invoked_subcommand is not None:
         return
     if clear_checkpoints:
-        from tradingagents.graph.checkpointer import clear_all_checkpoints
+        from finbotagents.graph.checkpointer import clear_all_checkpoints
         n = clear_all_checkpoints(DEFAULT_CONFIG["data_cache_dir"])
         console.print(f"[yellow]Cleared {n} checkpoint(s).[/yellow]")
     portfolio_context = None
@@ -171,7 +171,7 @@ Plan = StrEnum("Plan", {name: name for name in SIGNED_IN_PROVIDERS})
 @app.command()
 def login(plan: Annotated[Plan, typer.Argument(help="The plan to sign in with")]):
     """Sign in with your ChatGPT Plus or Pro plan, for the chatgpt provider."""
-    from tradingagents.llm_clients import chatgpt_auth
+    from finbotagents.llm_clients import chatgpt_auth
 
     try:
         # One unwrapped line, so the sign-in address can be copied whole.
@@ -186,7 +186,7 @@ def login(plan: Annotated[Plan, typer.Argument(help="The plan to sign in with")]
 @app.command()
 def logout(plan: Annotated[Plan, typer.Argument(help="The plan to sign out of")]):
     """Sign out of your ChatGPT plan: revoke this machine's access and forget it."""
-    from tradingagents.llm_clients import chatgpt_auth
+    from finbotagents.llm_clients import chatgpt_auth
 
     outcome = chatgpt_auth.sign_out()
     if outcome == "revoked":

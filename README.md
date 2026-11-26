@@ -1,6 +1,6 @@
 # FinBotAgents — v0.8.0
 
-![FinBotAgents](tradingagents/assets/finbotagents.png)
+![FinBotAgents](assets/finbotagents.png)
 
 FinBotAgents is the financial analysis backend for Lucrari. It runs a multi-agent research workflow and returns a structured report that the mobile app can display.
 
@@ -38,6 +38,8 @@ ruff check .
 ```
 
 For a standalone analysis, run `finbotagents --help` and configure a supported provider using [`.env.example`](.env.example). The existing `tradingagents` command also works. The [local analysis service guide](docs/local-analysis-service.md) covers the non-interactive entry point.
+
+Settings accept the `FINBOTAGENTS_` prefix; existing `TRADINGAGENTS_` settings remain supported. When both are set, the non-empty `FINBOTAGENTS_` value takes precedence. Existing local data remains under `~/.tradingagents`.
 
 ## Run the backend
 

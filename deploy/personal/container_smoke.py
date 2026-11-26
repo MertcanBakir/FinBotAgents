@@ -47,7 +47,7 @@ def main():
             "LUCRARI_BACKEND_SETTINGS_FILE": str(settings_file),
             "LUCRARI_DISPATCHER": "database",
         }
-        command = [sys.executable, "-m", "tradingagents.service.backend.runtime"]
+        command = [sys.executable, "-m", "finbotagents.service.backend.runtime"]
         for action, expected in (
             ("init", {"initialized": True, "session_imported": False}),
             ("status", {"configured": True, "signed_in": False}),
@@ -72,7 +72,7 @@ def main():
                 sys.executable,
                 "-m",
                 "uvicorn",
-                "tradingagents.service.backend.runtime:application",
+                "finbotagents.service.backend.runtime:application",
                 "--factory",
                 "--host",
                 "127.0.0.1",

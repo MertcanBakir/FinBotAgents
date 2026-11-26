@@ -14,18 +14,18 @@ from uuid import UUID, uuid4
 import pytest
 from pydantic import ValidationError
 
-from tradingagents.service.cli import main
-from tradingagents.service.config import build_graph_config
-from tradingagents.service.engine import AnalysisEngine
-from tradingagents.service.errors import AnalysisServiceError, classify_error
-from tradingagents.service.memory import (
+from finbotagents.service.cli import main
+from finbotagents.service.config import build_graph_config
+from finbotagents.service.engine import AnalysisEngine
+from finbotagents.service.errors import AnalysisServiceError, classify_error
+from finbotagents.service.memory import (
     BoundMemory,
     MemoryDecision,
     MemoryOutcome,
     SQLiteMemoryRepository,
 )
-from tradingagents.service.models import AnalysisRequest, LLMChoice, ServiceSettings
-from tradingagents.service.normalize import normalize_result
+from finbotagents.service.models import AnalysisRequest, LLMChoice, ServiceSettings
+from finbotagents.service.normalize import normalize_result
 
 USER_A = UUID("11111111-1111-4111-8111-111111111111")
 USER_B = UUID("22222222-2222-4222-8222-222222222222")
@@ -145,7 +145,7 @@ def test_ticker_contract(request_data, ticker):
 def test_server_config_is_bounded_and_deeply_isolated(
     request_data, settings, tmp_path, monkeypatch
 ):
-    from tradingagents.default_config import DEFAULT_CONFIG
+    from finbotagents.default_config import DEFAULT_CONFIG
 
     monkeypatch.setitem(DEFAULT_CONFIG, "max_debate_rounds", 5)
     monkeypatch.setitem(DEFAULT_CONFIG, "memory_log_path", "/private/user-memory.md")
@@ -166,11 +166,16 @@ def test_server_config_is_bounded_and_deeply_isolated(
 
 
 def test_server_settings_reject_secret_endpoint_and_unbounded_retries(settings):
-    for values in ({"llm_max_retries": 200}, {"api_key": "secret"}, {"max_tool_rounds": 999}):
+    for values in ({"llm_max_retries": 200}, {"api_key": "secret"}):
         with pytest.raises(ValidationError):
             ServiceSettings(**(settings.model_dump() | values))
     with pytest.raises(ValidationError):
         LLMChoice(provider="chatgpt", model="https://attacker.example")
+
+
+def test_server_settings_reject_removed_tool_rounds_setting(settings):
+    with pytest.raises(ValidationError):
+        ServiceSettings(**(settings.model_dump() | {"max_tool_rounds": 12}))
 
 
 def test_twelve_cards_rating_action_and_summary_are_distinct(state, request_data, settings):
@@ -322,7 +327,7 @@ def test_bound_memory_cannot_change_ticker(tmp_path):
 
 
 def test_headless_graph_reads_memory_without_settlement_or_disk_writes(tmp_path):
-    from tradingagents.service.graph import HeadlessTradingGraph
+    from finbotagents.service.graph import HeadlessTradingGraph
 
     graph = HeadlessTradingGraph.__new__(HeadlessTradingGraph)
     repo = SQLiteMemoryRepository(tmp_path / "m.sqlite3")
@@ -477,7 +482,7 @@ def test_memory_save_failure_is_an_explicit_warning(state, request_data, setting
 
 
 def test_memory_read_failure_is_safe_and_does_not_settle():
-    from tradingagents.service.graph import HeadlessTradingGraph
+    from finbotagents.service.graph import HeadlessTradingGraph
 
     class BrokenMemory:
         def get_past_context(self, *args):

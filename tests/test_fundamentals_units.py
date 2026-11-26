@@ -9,8 +9,8 @@ from unittest import mock
 
 import pytest
 
-from tradingagents.dataflows import date_window
-from tradingagents.dataflows.vendors.yahoo import fundamentals
+from finbotagents.dataflows import date_window
+from finbotagents.dataflows.vendors.yahoo import fundamentals
 
 TODAY = "2026-09-26"
 

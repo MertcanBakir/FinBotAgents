@@ -4,12 +4,12 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
-from tradingagents.agents import tools
-from tradingagents.dataflows.config import run_config
-from tradingagents.dataflows.errors import VendorUnavailableError
-from tradingagents.dataflows.outlook import compare_consensus_to_guidance
-from tradingagents.dataflows.vendors import sec_edgar, sec_outlook
-from tradingagents.dataflows.vendors.yahoo import outlook
+from finbotagents.agents import tools
+from finbotagents.dataflows.config import run_config
+from finbotagents.dataflows.errors import VendorUnavailableError
+from finbotagents.dataflows.outlook import compare_consensus_to_guidance
+from finbotagents.dataflows.vendors import sec_edgar, sec_outlook
+from finbotagents.dataflows.vendors.yahoo import outlook
 
 pytestmark = pytest.mark.unit
 

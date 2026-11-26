@@ -48,26 +48,25 @@ dev = [
     "pytest-subtests>=0.13",
 ]
 # Amazon Bedrock support (AWS SigV4 auth + boto3). Optional so the core install
-# stays lean: pip install "tradingagents[bedrock]".
+# stays lean: pip install "finbotagents[bedrock]".
 bedrock = [
     "langchain-aws>=1.7.9",
 ]
 
 [project.scripts]
 finbotagents = "cli.main:app"
+finbotagents-analyze = "finbotagents.service.cli:main"
+finbotagents-backend = "finbotagents.service.backend.runtime:main"
 tradingagents = "cli.main:app"
-tradingagents-analyze = "tradingagents.service.cli:main"
-tradingagents-backend = "tradingagents.service.backend.runtime:main"
+tradingagents-analyze = "finbotagents.service.cli:main"
+tradingagents-backend = "finbotagents.service.backend.runtime:main"
 
 [tool.setuptools.dynamic]
-version = {attr = "tradingagents.__version__"}
-
-[tool.setuptools.packages.find]
-include = ["tradingagents*", "cli*"]
+version = {attr = "finbotagents.__version__"}
 
 [tool.setuptools.package-data]
 cli = ["static/*"]
-tradingagents = ["assets/*.png"]
+finbotagents_assets = ["finbotagents.png"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

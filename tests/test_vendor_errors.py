@@ -8,21 +8,21 @@ from unittest import mock
 
 import pytest
 
-import tradingagents.dataflows.config as config_module
-import tradingagents.default_config as default_config
-from tradingagents.dataflows import router
-from tradingagents.dataflows.config import set_config
-from tradingagents.dataflows.errors import (
+import finbotagents.dataflows.config as config_module
+import finbotagents.default_config as default_config
+from finbotagents.dataflows import router
+from finbotagents.dataflows.config import set_config
+from finbotagents.dataflows.errors import (
     NoMarketDataError,
     VendorError,
     VendorNotConfiguredError,
     VendorUnavailableError,
 )
-from tradingagents.dataflows.vendors.alpha_vantage.common import (
+from finbotagents.dataflows.vendors.alpha_vantage.common import (
     AlphaVantageNotConfiguredError,
     AlphaVantageRateLimitError,
 )
-from tradingagents.dataflows.vendors.fred import FredNotConfiguredError
+from finbotagents.dataflows.vendors.fred import FredNotConfiguredError
 
 
 @pytest.mark.unit

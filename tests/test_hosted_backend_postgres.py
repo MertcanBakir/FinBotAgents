@@ -20,14 +20,14 @@ import pytest
 from psycopg.rows import dict_row
 
 from deploy.personal import migrate
+from finbotagents.service.backend.contracts import StartAnalysis
+from finbotagents.service.backend.evaluation import EvaluationJob
+from finbotagents.service.backend.repository import Repository, SupabaseMemoryRepository
+from finbotagents.service.errors import AnalysisServiceError
+from finbotagents.service.memory import MemoryDecision, MemoryOutcome
 from tests import test_database_migrations_postgres as postgres
 from tests.test_database_migrations import SOURCE
 from tests.test_hosted_backend import settings
-from tradingagents.service.backend.contracts import StartAnalysis
-from tradingagents.service.backend.evaluation import EvaluationJob
-from tradingagents.service.backend.repository import Repository, SupabaseMemoryRepository
-from tradingagents.service.errors import AnalysisServiceError
-from tradingagents.service.memory import MemoryDecision, MemoryOutcome
 
 pytestmark = pytest.mark.integration
 
@@ -487,14 +487,14 @@ def test_api_engine_worker_storage_roundtrip_and_user_b_denial(db, personal, tmp
     import httpx
     from fastapi.testclient import TestClient
 
+    from finbotagents.service.backend.api import create_app
+    from finbotagents.service.backend.security import SecretVault, SupabaseAuthenticator
+    from finbotagents.service.backend.storage import ReportStorage
+    from finbotagents.service.backend.worker import DeferredMemory, Worker
+    from finbotagents.service.engine import AnalysisEngine
+    from finbotagents.service.models import AnalysisRequest, ServiceSettings
     from tests.test_analysis_service import state
     from tests.test_personal_backend import personal_settings
-    from tradingagents.service.backend.api import create_app
-    from tradingagents.service.backend.security import SecretVault, SupabaseAuthenticator
-    from tradingagents.service.backend.storage import ReportStorage
-    from tradingagents.service.backend.worker import DeferredMemory, Worker
-    from tradingagents.service.engine import AnalysisEngine
-    from tradingagents.service.models import AnalysisRequest, ServiceSettings
 
     if personal:
         db.repo = Repository(

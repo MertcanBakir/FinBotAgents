@@ -15,8 +15,8 @@ from rich.spinner import Spinner
 from rich.table import Table
 from rich.text import Text
 
-from tradingagents.agent_stats import append_agent_stats
-from tradingagents.graph.analyst_execution import (
+from finbotagents.agent_stats import append_agent_stats
+from finbotagents.graph.analyst_execution import (
     ANALYST_NODE_SPECS,
     AnalystExecutionPlan,
 )

@@ -102,7 +102,7 @@ jobs:
           bin="$RUNNER_TEMP/wheel-smoke/bin"
           "$bin/python" -m pip install "$RUNNER_TEMP"/wheels/*.whl
           "$bin/python" -m pip check
-          "$bin/python" -c "import tradingagents, cli.main"
+          "$bin/python" -c "import finbotagents, finbotagents.report_html, cli.main"
           "$bin/finbotagents" --help
           "$bin/tradingagents" --help
 
@@ -204,6 +204,7 @@ jobs:
           python -m coverage combine test-results/unit/coverage-unit test-results/postgres/coverage-postgres
           python -m coverage report --format=markdown > test-results/coverage.md
           python -m coverage xml -o test-results/coverage.xml
+          python -m coverage json -o test-results/coverage.json
           python -m coverage html -d test-results/coverage-html
           {
             echo '## Combined Python and PostgreSQL coverage'
@@ -223,16 +224,20 @@ jobs:
             cat test-results/diff-coverage.md
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload coverage reports
+        if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-reports
           path: |
             test-results/coverage.md
             test-results/coverage.xml
+            test-results/coverage.json
             test-results/coverage-html/
             test-results/diff-coverage.md
           if-no-files-found: error
           retention-days: 14
+      - name: Enforce line and branch coverage minimums
+        run: python deploy/personal/check_coverage.py test-results/coverage.json
 
   worker-image:
     name: production image (ARM64)
@@ -244,11 +249,11 @@ jobs:
       - name: Build the worker test runner with pinned Python 3.13 dependencies
         run: |
           docker build --platform linux/arm64 --file Dockerfile.worker \
-            --target test-runner --tag tradingagents-worker-tests:ci .
+            --target test-runner --tag finbotagents-worker-tests:ci .
       - name: Run tests in the ARM64 worker environment
         run: |
           docker run --name worker-ci-tests --platform linux/arm64 --network none \
-            --entrypoint python tradingagents-worker-tests:ci \
+            --entrypoint python finbotagents-worker-tests:ci \
             -m pytest -p no:cacheprovider -q --tb=short --junitxml=/tmp/junit-worker-arm64.xml
       - name: Collect ARM64 test report
         if: ${{ always() }}
@@ -270,8 +275,8 @@ jobs:
         run: |
           docker build --platform linux/arm64 --file Dockerfile.worker \
             --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
-            --tag tradingagents-worker:ci .
-          test "$(docker image inspect --format '{{.Os}}/{{.Architecture}}' tradingagents-worker:ci)" = "linux/arm64"
+            --tag finbotagents-worker:ci .
+          test "$(docker image inspect --format '{{.Os}}/{{.Architecture}}' finbotagents-worker:ci)" = "linux/arm64"
       - name: Smoke test the packaged API with production restrictions
         # Fake settings only; no network, real session, database or AWS credentials.
         run: |
@@ -280,7 +285,7 @@ jobs:
             --security-opt no-new-privileges --pids-limit 256 \
             --tmpfs /tmp:rw,nosuid,nodev,size=256m,mode=1777 \
             --mount "type=bind,source=${GITHUB_WORKSPACE}/deploy/personal/container_smoke.py,target=/tmp/container_smoke.py,readonly" \
-            --entrypoint python tradingagents-worker:ci /tmp/container_smoke.py
+            --entrypoint python finbotagents-worker:ci /tmp/container_smoke.py
       - name: Export the tested production image for CD
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: python3 deploy/personal/cd_pipeline.py package runtime-image
@@ -297,7 +302,7 @@ jobs:
   ci-passed:
     name: CI passed
     if: ${{ always() }}
-    needs: [test, smoke-install, lint, worker-image, database-migrations, version-check]
+    needs: [test, smoke-install, lint, worker-image, database-migrations, version-check, coverage]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

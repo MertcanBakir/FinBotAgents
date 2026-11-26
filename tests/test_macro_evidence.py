@@ -3,10 +3,10 @@ from datetime import date, timedelta
 import pytest
 from dateutil.relativedelta import relativedelta
 
-from tradingagents.agents.analyst_support.macro import compact_macro, macro_news_only, macro_windows
-from tradingagents.dataflows.vendors import fred
-from tradingagents.technical_analysis.reporting import render_zones
-from tradingagents.technical_analysis.zones import ZoneEvidence
+from finbotagents.agents.analyst_support.macro import compact_macro, macro_news_only, macro_windows
+from finbotagents.dataflows.vendors import fred
+from finbotagents.technical_analysis.reporting import render_zones
+from finbotagents.technical_analysis.zones import ZoneEvidence
 
 
 @pytest.mark.parametrize('horizon,inflation,monthly,daily', [

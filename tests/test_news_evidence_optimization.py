@@ -2,9 +2,9 @@ import json
 import random
 from unittest.mock import patch
 
-from tradingagents.agents.analyst_support.insider_sales import prepare_insider_sales
-from tradingagents.agents.analyst_support.news import deduplicate_news_blocks
-from tradingagents.dataflows.vendors import stocktwits
+from finbotagents.agents.analyst_support.insider_sales import prepare_insider_sales
+from finbotagents.agents.analyst_support.news import deduplicate_news_blocks
+from finbotagents.dataflows.vendors import stocktwits
 
 
 def test_random_sampling_uses_filtered_pool_and_removes_usernames():

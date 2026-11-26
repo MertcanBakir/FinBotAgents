@@ -17,8 +17,8 @@ import psycopg
 from pglast import split
 from psycopg.conninfo import conninfo_to_dict
 
-from tradingagents.service.backend.runtime import settings_from_env
-from tradingagents.service.backend.storage import ReportStorage
+from finbotagents.service.backend.runtime import settings_from_env
+from finbotagents.service.backend.storage import ReportStorage
 
 SQL_FILE = Path(__file__).with_name("20261102000000_multi_user_provider_connections.sql")
 VERSION = "20261102000000"

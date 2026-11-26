@@ -227,7 +227,7 @@ def main():
         if args.validate:
             print(json.dumps({"status": "validated", "files": len(migrations)}))
             return
-        from tradingagents.service.backend.runtime import settings_from_env
+        from finbotagents.service.backend.runtime import settings_from_env
         dsn = settings_from_env().database_url.get_secret_value()
         info = conninfo_to_dict(dsn)
         if info.get("host") not in {"localhost", "127.0.0.1", "::1"} and info.get("sslmode") != "verify-full":

@@ -9,15 +9,15 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
+from finbotagents.llm_clients import factory
+from finbotagents.llm_clients.tier_credentials import credential_for, tier_credentials
+from finbotagents.service.backend.api import create_app
+from finbotagents.service.backend.contracts import APIProvider, ConnectionInput, StartAnalysis
+from finbotagents.service.backend.providers import ProviderProbe, endpoint
+from finbotagents.service.backend.security import SupabaseAuthenticator
+from finbotagents.service.errors import AnalysisServiceError
 from tests.test_hosted_backend import settings
 from tests.test_personal_backend import personal_settings
-from tradingagents.llm_clients import factory
-from tradingagents.llm_clients.tier_credentials import credential_for, tier_credentials
-from tradingagents.service.backend.api import create_app
-from tradingagents.service.backend.contracts import APIProvider, ConnectionInput, StartAnalysis
-from tradingagents.service.backend.providers import ProviderProbe, endpoint
-from tradingagents.service.backend.security import SupabaseAuthenticator
-from tradingagents.service.errors import AnalysisServiceError
 
 
 def api_body(a=None, b=None):
@@ -141,7 +141,7 @@ def test_tier_credentials_are_reset_after_exception():
 
 
 def test_explicit_openai_key_does_not_require_or_use_another_users_env(monkeypatch):
-    from tradingagents.llm_clients import openai_client
+    from finbotagents.llm_clients import openai_client
 
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     from dataclasses import replace
@@ -188,7 +188,7 @@ def test_cd_cannot_deploy_v2_before_explicit_transition_gate():
 def test_api_only_daemon_does_not_need_personal_session(monkeypatch):
     import signal
 
-    from tradingagents.service.backend import runtime, worker
+    from finbotagents.service.backend import runtime, worker
 
     repo = MagicMock()
     repo.settings = settings()

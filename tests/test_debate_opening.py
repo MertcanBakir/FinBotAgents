@@ -12,12 +12,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from tradingagents.agents.context import opponent_argument_or_opening
-from tradingagents.agents.researchers.bear_researcher import create_bear_researcher
-from tradingagents.agents.researchers.bull_researcher import create_bull_researcher
-from tradingagents.agents.risk_mgmt.aggressive_debator import create_aggressive_debator
-from tradingagents.agents.risk_mgmt.conservative_debator import create_conservative_debator
-from tradingagents.agents.risk_mgmt.neutral_debator import create_neutral_debator
+from finbotagents.agents.context import opponent_argument_or_opening
+from finbotagents.agents.researchers.bear_researcher import create_bear_researcher
+from finbotagents.agents.researchers.bull_researcher import create_bull_researcher
+from finbotagents.agents.risk_mgmt.aggressive_debator import create_aggressive_debator
+from finbotagents.agents.risk_mgmt.conservative_debator import create_conservative_debator
+from finbotagents.agents.risk_mgmt.neutral_debator import create_neutral_debator
 
 _REPORTS = {
     "company_of_interest": "AAPL", "asset_type": "stock",

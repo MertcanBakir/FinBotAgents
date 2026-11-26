@@ -4,7 +4,7 @@ Responses API) so a future edit can't silently break one.
 """
 import pytest
 
-from tradingagents.llm_clients.openai_client import (
+from finbotagents.llm_clients.openai_client import (
     OPENAI_COMPATIBLE_PROVIDERS,
     DeepSeekChatOpenAI,
     MinimaxChatOpenAI,
@@ -65,7 +65,7 @@ class _Recorder:
 
 
 def _signed_in_provider(monkeypatch, token="plan-token"):
-    from tradingagents.llm_clients import openai_client
+    from finbotagents.llm_clients import openai_client
 
     spec = openai_client.ProviderSpec(
         base_url="https://api.openai.com/v1", pinned_base_url=True, use_responses_api=True,
@@ -99,7 +99,7 @@ def test_a_signed_in_provider_refuses_another_endpoint_or_key(monkeypatch, clien
 
 @pytest.mark.unit
 def test_a_missing_sign_in_fails_before_any_request(monkeypatch):
-    from tradingagents.llm_clients import openai_client
+    from finbotagents.llm_clients import openai_client
 
     def not_signed_in():
         raise ValueError("Not signed in; run `tradingagents login chatgpt`.")

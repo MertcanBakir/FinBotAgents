@@ -13,8 +13,8 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
-from tradingagents.dataflows.vendors.yahoo import ohlcv
-from tradingagents.dataflows.vendors.yahoo.candles import (
+from finbotagents.dataflows.vendors.yahoo import ohlcv
+from finbotagents.dataflows.vendors.yahoo.candles import (
     attach_daily_provenance,
     latest_daily_candle,
 )

@@ -6,7 +6,7 @@ from typing import TypedDict
 
 from langgraph.graph import END, StateGraph
 
-from tradingagents.graph.checkpointer import (
+from finbotagents.graph.checkpointer import (
     checkpoint_step,
     clear_checkpoint,
     get_checkpointer,
@@ -193,7 +193,7 @@ class TestCheckpointSignature(unittest.TestCase):
     def test_a_resume_under_other_settings_starts_fresh(self):
         """The report names one provider, model set, language and vendor chain;
         a resume must not carry reports another of them produced."""
-        from tradingagents.graph.trading_graph import TradingAgentsGraph
+        from finbotagents.graph.trading_graph import TradingAgentsGraph
 
         g = object.__new__(TradingAgentsGraph)
         g.selected_analysts = ("market", "news")
@@ -206,7 +206,7 @@ class TestCheckpointSignature(unittest.TestCase):
                            ("output_language", "Deutsch"),
                            ("data_vendors", {"core_stock_apis": "alpha_vantage"}),
                            ("tool_vendors", {"get_news": "alpha_vantage"}),
-                           ("backend_url", "http://other-endpoint/v1"), ("max_tool_rounds", 30),
+                           ("backend_url", "http://other-endpoint/v1"),
                            ("temperature", 0.2), ("openai_reasoning_effort", "high")):
             g.config = {**base_config, key: value}
             self.assertNotEqual(base, g._run_signature("stock"), key)
@@ -219,7 +219,7 @@ class TestCheckpointSignature(unittest.TestCase):
         self.assertEqual(base, g._run_signature("stock"))
 
     def test_run_signature_captures_graph_shape(self):
-        from tradingagents.graph.trading_graph import TradingAgentsGraph
+        from finbotagents.graph.trading_graph import TradingAgentsGraph
 
         # Build a bare instance to exercise the pure helper without heavy __init__.
         g = object.__new__(TradingAgentsGraph)

@@ -14,10 +14,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from tradingagents.agents.managers.portfolio_manager import create_portfolio_manager
-from tradingagents.agents.managers.research_manager import create_research_manager
-from tradingagents.agents.structured import NO_EXTERNAL_TOOLS
-from tradingagents.agents.trader.trader import create_trader
+from finbotagents.agents.managers.portfolio_manager import create_portfolio_manager
+from finbotagents.agents.managers.research_manager import create_research_manager
+from finbotagents.agents.structured import NO_EXTERNAL_TOOLS
+from finbotagents.agents.trader.trader import create_trader
 
 
 def _capturing_llm(captured: dict, result):
@@ -43,7 +43,7 @@ def _prompt_text(prompt) -> str:
 
 @pytest.mark.unit
 def test_trader_prompt_states_constraint():
-    from tradingagents.agents.schemas import TraderAction, TraderProposal
+    from finbotagents.agents.schemas import TraderAction, TraderProposal
 
     captured = {}
     llm = _capturing_llm(captured, TraderProposal(action=TraderAction.BUY, reasoning="x"))
@@ -57,7 +57,7 @@ def test_trader_prompt_states_constraint():
 
 @pytest.mark.unit
 def test_research_manager_prompt_states_constraint():
-    from tradingagents.agents.schemas import PortfolioRating, ResearchPlan
+    from finbotagents.agents.schemas import PortfolioRating, ResearchPlan
 
     captured = {}
     llm = _capturing_llm(
@@ -81,8 +81,8 @@ def test_research_manager_prompt_states_constraint():
 def test_portfolio_manager_prompt_states_constraint(use_structured):
     from langchain_core.messages import AIMessage
 
-    from tradingagents.agents.schemas import PortfolioDecision, PortfolioRating
-    from tradingagents.dataflows.config import run_config
+    from finbotagents.agents.schemas import PortfolioDecision, PortfolioRating
+    from finbotagents.dataflows.config import run_config
 
     captured = {}
     llm = _capturing_llm(
@@ -125,9 +125,9 @@ def test_portfolio_manager_prompt_states_constraint(use_structured):
 def test_fundamentals_prefetches_all_sources_once_and_writes_one_report(monkeypatch):
     from langchain_core.messages import AIMessage
 
-    import tradingagents.agents.analysts.fundamentals_analyst as fundamentals
-    from tradingagents.agents import tools
-    from tradingagents.dataflows.config import run_config
+    import finbotagents.agents.analysts.fundamentals_analyst as fundamentals
+    from finbotagents.agents import tools
+    from finbotagents.dataflows.config import run_config
 
     ticker, date = "NVDA", "2026-01-15"
     expected = [
@@ -217,7 +217,7 @@ def test_fundamentals_prefetches_all_sources_once_and_writes_one_report(monkeypa
     ("DATA_UNAVAILABLE: provider unavailable", "DATA_UNAVAILABLE: provider unavailable"),
 ])
 def test_news_insider_sales_distinguishes_empty_and_unavailable(source, expected):
-    from tradingagents.agents.analyst_support.insider_sales import prepare_insider_sales
+    from finbotagents.agents.analyst_support.insider_sales import prepare_insider_sales
 
     assert prepare_insider_sales(source, "2026-01-15").endswith(expected)
 
@@ -229,8 +229,8 @@ def test_news_insider_sales_distinguishes_empty_and_unavailable(source, expected
 def test_fundamentals_limits_sec_statement_history_by_horizon(monkeypatch, horizon, keeps_year_ago):
     from langchain_core.messages import AIMessage
 
-    from tradingagents.agents import tools
-    from tradingagents.agents.analysts.fundamentals_analyst import create_fundamentals_analyst
+    from finbotagents.agents import tools
+    from finbotagents.agents.analysts.fundamentals_analyst import create_fundamentals_analyst
 
     header = "# SEC EDGAR facts filed on or before 2026-11-13, at the values filed then"
     statement = (

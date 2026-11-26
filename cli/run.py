@@ -24,14 +24,14 @@ from cli.display import (
 )
 from cli.selections import depth_from_env, get_user_selections, unattended_gaps
 from cli.stats_handler import StatsCallbackHandler
-from tradingagents.agent_stats import append_agent_stats
-from tradingagents.agents.rating import is_review, run_rating
-from tradingagents.dataflows.symbols import safe_ticker_component
-from tradingagents.default_config import DEFAULT_CONFIG
-from tradingagents.graph.analyst_execution import (
+from finbotagents.agent_stats import append_agent_stats
+from finbotagents.agents.rating import is_review, run_rating
+from finbotagents.dataflows.symbols import safe_ticker_component
+from finbotagents.default_config import DEFAULT_CONFIG, brand_env
+from finbotagents.graph.analyst_execution import (
     build_analyst_execution_plan,
 )
-from tradingagents.graph.trading_graph import TradingAgentsGraph
+from finbotagents.graph.trading_graph import FinBotAgentsGraph
 
 
 def _run_directory(config: dict, ticker: str, trade_date: str) -> Path:
@@ -72,7 +72,7 @@ def _build_run_config(selections: dict, checkpoint: bool | None) -> dict:
               ("TRADINGAGENTS_MAX_RISK_ROUNDS", "max_risk_discuss_rounds"))
     depth_was_asked = not depth_from_env()
     for env_var, key in rounds:
-        if not os.environ.get(env_var):
+        if not brand_env(env_var):
             config[key] = selections["research_depth"]
         elif depth_was_asked:
             # The depth question appeared (it is skipped only when both are
@@ -123,7 +123,7 @@ def run_analysis(checkpoint: bool | None = None, portfolio=None, flags=None):
     analyst_execution_plan = build_analyst_execution_plan(selected_analyst_keys)
     analyst_wall_time_tracker = AnalystWallTimeTracker(analyst_execution_plan)
 
-    graph = TradingAgentsGraph(
+    graph = FinBotAgentsGraph(
         selected_analyst_keys,
         config=config,
         debug=True,
