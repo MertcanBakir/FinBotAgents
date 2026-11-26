@@ -23,10 +23,13 @@ from pathlib import Path
 SERVICES = ("api", "worker", "maintenance")
 REPOSITORY = "500888846202.dkr.ecr.eu-west-1.amazonaws.com/lucrari/tradingagents-personal"
 PROBE = """
+import importlib
+import importlib.util
 import json
 try:
-    from finbotagents.service.backend.runtime import settings_from_env
-    from finbotagents.service.backend.repository import Repository
+    package = 'finbotagents' if importlib.util.find_spec('finbotagents') else 'tradingagents'
+    settings_from_env = importlib.import_module(package + '.service.backend.runtime').settings_from_env
+    Repository = importlib.import_module(package + '.service.backend.repository').Repository
     repo = Repository(settings_from_env())
     models = repo.provider_models('chatgpt')
     with repo.transaction() as conn:
@@ -44,6 +47,42 @@ except Exception:
 
 class DeploymentError(RuntimeError):
     pass
+
+
+def transition_compose(text):
+    """Allow exactly the known three-service runtime layout and preserve all other text."""
+    old = "tradingagents.service.backend.runtime"
+    new = "finbotagents.service.backend.runtime"
+    old_count, new_count = text.count(old), text.count(new)
+    if old_count == 3 and new_count == 0 and text.count(old + ":application") == 1:
+        return text.replace(old, new)
+    if new_count == 3 and old_count == 0 and text.count(new + ":application") == 1:
+        return text
+    raise DeploymentError("Unexpected Compose runtime layout; manual review required")
+
+
+def expected_compose_transition(config):
+    """Permit only runtime module changes in the three backend entrypoints."""
+    updated = json.loads(json.dumps(config))
+    old = "tradingagents.service.backend.runtime"
+    new = "finbotagents.service.backend.runtime"
+    observed = []
+    try:
+        for service, suffix in (("api", ":application"), ("worker", ""), ("maintenance", "")):
+            entrypoint = updated["services"][service]["entrypoint"]
+            if not isinstance(entrypoint, list):
+                raise ValueError
+            matches = [i for i, item in enumerate(entrypoint) if item in (old + suffix, new + suffix)]
+            if len(matches) != 1:
+                raise ValueError
+            index = matches[0]
+            observed.append(entrypoint[index] == old + suffix)
+            entrypoint[index] = new + suffix
+        if any(observed) and not all(observed):
+            raise ValueError
+    except (KeyError, TypeError, ValueError):
+        raise DeploymentError("Unexpected Compose service entrypoints; manual review required") from None
+    return updated
 
 
 def image_setting(text):
@@ -72,8 +111,17 @@ def atomic_env(path, text):
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(name, path)
+        fsync_directory(path.parent)
     finally:
         Path(name).unlink(missing_ok=True)
+
+
+def fsync_directory(path):
+    fd = os.open(str(path), os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 
 class Commands:
@@ -282,12 +330,27 @@ class Deployment:
     def deploy(self, digest, commit):
         if not re.fullmatch(r"sha256:[0-9a-f]{64}", digest) or not re.fullmatch(r"[0-9a-f]{40}", commit):
             raise DeploymentError("Invalid digest or commit")
+        pending = Path(self.config["backup_directory"]) / "deployment-pending.json"
+        if pending.exists() or pending.is_symlink():
+            raise DeploymentError("An interrupted deployment requires manual recovery")
         if self.env_path.is_symlink() or stat.S_IMODE(self.env_path.stat().st_mode) & 0o077:
             raise DeploymentError("Unsafe environment file permissions")
         previous_text = self.env_path.read_text()
         previous = image_setting(previous_text)
+        compose_path = self.base / "compose.personal.yml"
+        if compose_path.is_symlink() or not compose_path.is_file() or stat.S_IMODE(compose_path.stat().st_mode) & 0o022:
+            raise DeploymentError("Unsafe Compose configuration")
+        original_compose = compose_path.read_text()
+        updated_compose = transition_compose(original_compose)
         image = REPOSITORY + "@" + digest
         self.run([*self.compose, "config", "--quiet"])
+        try:
+            compose_config = json.loads(self.run([*self.compose, "config", "--format", "json"]))
+        except (TypeError, ValueError):
+            raise DeploymentError("Unable to inspect Compose configuration") from None
+        expected_config = expected_compose_transition(compose_config)
+        if (updated_compose == original_compose) != (compose_config == expected_config):
+            raise DeploymentError("Compose source and effective configuration disagree")
         edge = self.container("edge")["Id"]
         for service in SERVICES:
             if self.container(service)["Config"]["Image"] != previous:
@@ -296,6 +359,8 @@ class Deployment:
         if not before.get("ok"):
             raise DeploymentError("Database preflight failed")
         if previous == image:
+            if updated_compose != original_compose:
+                raise DeploymentError("Current image uses legacy Compose configuration; manual review required")
             self.verify_image(image, commit, before.get("schema_revision", 1))
             self.migrate(image)
             updated_text, provider_values = self.provider_settings(previous_text)
@@ -314,7 +379,8 @@ class Deployment:
         rollback_compatible = previous_schema == str(before.get("schema_revision", 1))
         backup_dir = Path(self.config["backup_directory"])
         backup_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
-        if backup_dir.is_symlink() or stat.S_IMODE(backup_dir.stat().st_mode) & 0o077:
+        if (backup_dir.is_symlink() or backup_dir.stat().st_uid != os.geteuid()
+                or stat.S_IMODE(backup_dir.stat().st_mode) & 0o077):
             raise DeploymentError("Unsafe backup directory")
         backup = backup_dir / f"{time.time_ns()}-{commit[:12]}.env"
         with backup.open("x") as stream:
@@ -322,10 +388,31 @@ class Deployment:
             stream.write(previous_text)
             stream.flush()
             os.fsync(stream.fileno())
+        fsync_directory(backup_dir)
+        compose_backup = backup.with_suffix(".compose")
+        with compose_backup.open("x") as stream:
+            os.fchmod(stream.fileno(), 0o600)
+            stream.write(original_compose)
+            stream.flush()
+            os.fsync(stream.fileno())
         # A failed migration stops BEFORE .env changes or container recreation.
         # Successful additive schema changes stay applied during image rollback.
         migrations = self.migrate(image, apply=True)
+        if compose_path.read_text() != original_compose or self.env_path.read_text() != previous_text:
+            raise DeploymentError("Runtime configuration changed during deployment; manual review required")
+        with pending.open("x") as journal:
+            os.fchmod(journal.fileno(), 0o600)
+            json.dump({"env_backup": str(backup), "compose_backup": str(compose_backup),
+                       "previous_image": previous, "commit": commit}, journal)
+            journal.flush()
+            os.fsync(journal.fileno())
+        fsync_directory(backup_dir)
         try:
+            if updated_compose != original_compose:
+                atomic_env(compose_path, updated_compose)
+                self.run([*self.compose, "config", "--quiet"])
+                if json.loads(self.run([*self.compose, "config", "--format", "json"])) != expected_config:
+                    raise DeploymentError("Compose transition changed unexpected configuration")
             atomic_env(self.env_path, update_image(updated_text, image))
             self.run([*self.compose, "up", "--detach", "--no-deps", "--no-build", "--force-recreate", *SERVICES])
             if not self.providers_match(provider_values):
@@ -334,13 +421,19 @@ class Deployment:
         except Exception:
             if not rollback_compatible:
                 raise DeploymentError("Deployment failed; previous image is incompatible with the database schema; keep maintenance enabled and recover forward") from None
-            atomic_env(self.env_path, previous_text)
             try:
+                if compose_path.read_text() != original_compose:
+                    atomic_env(compose_path, original_compose)
+                atomic_env(self.env_path, previous_text)
                 self.run([*self.compose, "up", "--detach", "--no-deps", "--no-build", "--force-recreate", *SERVICES])
                 self.verify(previous, edge, 0)
             except Exception:
                 raise DeploymentError("Deployment and rollback failed; private backup retained") from None
+            pending.unlink()
+            fsync_directory(backup_dir)
             raise DeploymentError("Deployment failed; previous image restored and verified") from None
+        pending.unlink()
+        fsync_directory(backup_dir)
         return {"status": "deployed", "image": image, "commit": commit,
                 "data_providers_verified": provider_values is not None,
                 "previous_image": previous, "active_jobs_before": before["active_jobs"],

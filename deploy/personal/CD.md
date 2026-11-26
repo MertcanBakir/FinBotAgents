@@ -119,10 +119,15 @@ The helper:
   A migration failure stops before any container restart or image change.
 - Reads the current data provider settings from AWS Parameter Store using the
   EC2 role and checks that Compose routes them only to the worker.
+- During the Python package transition, accepts either the legacy or current
+  package for the existing container preflight. It updates only the three known
+  backend runtime module references in the host Compose file, compares the full
+  effective Compose configuration before and after, and aborts on drift or an
+  unexpected layout. The new application image does not include the legacy package.
 - Preserves ownership/permissions and atomically updates `LUCRARI_IMAGE` and
   the three data provider settings in the private host `.env`.
 - Recreates only `api`, `worker`, `maintenance` with `--no-deps --no-build`.
-  It does not replace the server's Compose file, Caddyfile, Caddy container or
+  It does not replace other Compose settings, the Caddyfile, Caddy container or
   volumes, CA mount, settings or ChatGPT session.
 - Requires two consecutive checks with correct running images, verified HTTPS
   `/healthz` and a nonempty fresh catalog refreshed after the database preflight
@@ -130,10 +135,17 @@ The helper:
 - Verifies the worker environment against the settings read for that deploy.
   For an already-current image, it recreates only the worker if the settings
   changed.
-- On failure after mutation, restores the complete original `.env`, recreates
-  the previous services and verifies them. The deployment is still reported as
+- On failure after mutation, restores the original Compose and `.env` files,
+  recreates the previous services and verifies them. The deployment is still reported as
   failed even when rollback succeeds. If rollback also fails, the private backup
   is retained and operator intervention is required.
+
+The helper saves private backups of both files and records a pending deployment
+before modifying either. If the process is interrupted or rollback fails, a
+later deployment refuses to proceed while `deployment-pending.json` exists.
+Inspect the recorded backups, running services and database schema before any
+manual recovery; migrations that committed are not automatically reversed. Do
+not simply remove the marker or restore an image without checking schema compatibility.
 
 An active analysis may be interrupted by a deployment, as explicitly accepted.
 The preflight records its count but does not wait for it to finish. A single EC2

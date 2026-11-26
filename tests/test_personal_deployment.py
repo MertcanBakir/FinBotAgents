@@ -132,6 +132,7 @@ class Docker:
         self.previous_schema = "1"
         self.migrations = []
         self.migration_failure = None
+        self.changed_compose_other = False
 
     def clock(self):
         self.ticks += 1
@@ -183,6 +184,19 @@ class Docker:
                 assert "--no-deps" in args and "--no-build" in args
                 self.image = host.image_setting((self.root / ".env").read_text())
                 self.updates.append(self.image)
+            elif args[-3:] == ["config", "--format", "json"]:
+                module = ("tradingagents" if "tradingagents.service.backend.runtime" in
+                          (self.root / "compose.personal.yml").read_text().replace("finbotagents.service.backend.runtime", "")
+                          else "finbotagents") + ".service.backend.runtime"
+                config = {"services": {
+                    "api": {"entrypoint": ["uvicorn", module + ":application"]},
+                    "worker": {"entrypoint": ["python", "-m", module]},
+                    "maintenance": {"entrypoint": ["python", "-m", module]},
+                    "edge": {"image": "caddy:2"},
+                }}
+                if self.changed_compose_other and module.startswith("finbotagents"):
+                    config["services"]["edge"]["image"] = "unexpected-image"
+                return json.dumps(config)
             else:
                 assert args[-2:] == ["config", "--quiet"]
             return ""
@@ -192,6 +206,11 @@ class Docker:
 @pytest.fixture
 def deployment(tmp_path):
     env = tmp_path / ".env"
+    compose = tmp_path / "compose.personal.yml"
+    compose.write_text("api: finbotagents.service.backend.runtime:application\n"
+                       "worker: finbotagents.service.backend.runtime\n"
+                       "maintenance: finbotagents.service.backend.runtime\n")
+    compose.chmod(0o644)
     original = f"# private runtime\nLUCRARI_IMAGE={OLD}\nPRIVATE_VALUE=FAKE_SECRET\n"
     env.write_text(original)
     env.chmod(0o600)
@@ -200,6 +219,96 @@ def deployment(tmp_path):
               "health_url": "https://example.invalid/healthz", "health_timeout": 10}
     deploy = host.Deployment(config, docker, clock=docker.clock, sleep=lambda _: None, health=lambda: True)
     return deploy, docker, env, original
+
+
+def test_deploy_migrates_legacy_compose_with_new_image(deployment):
+    deploy, docker, env, _ = deployment
+    compose = env.parent / "compose.personal.yml"
+    original = compose.read_text().replace("finbotagents.service.backend.runtime", "tradingagents.service.backend.runtime")
+    compose.write_text(original)
+    result = deploy.deploy(DIGEST, SHA)
+    assert result["status"] == "deployed"
+    assert compose.read_text() == original.replace("tradingagents.service.backend.runtime", "finbotagents.service.backend.runtime")
+    assert docker.updates == [NEW]
+
+
+def test_failed_deploy_restores_legacy_compose_and_old_image(deployment):
+    deploy, docker, env, original_env = deployment
+    compose = env.parent / "compose.personal.yml"
+    original = compose.read_text().replace("finbotagents.service.backend.runtime", "tradingagents.service.backend.runtime")
+    compose.write_text(original)
+    docker.bad_catalog = True
+    with pytest.raises(host.DeploymentError, match="previous image restored"):
+        deploy.deploy(DIGEST, SHA)
+    assert env.read_text() == original_env
+    assert compose.read_text() == original
+    assert docker.updates == [NEW, OLD]
+
+
+def test_unknown_compose_layout_is_rejected_before_mutation(deployment):
+    deploy, docker, env, original_env = deployment
+    compose = env.parent / "compose.personal.yml"
+    compose.write_text("unknown: layout\n")
+    with pytest.raises(host.DeploymentError, match="Compose"):
+        deploy.deploy(DIGEST, SHA)
+    assert env.read_text() == original_env
+    assert docker.updates == []
+
+
+def test_interrupted_transition_is_detected_before_the_next_deploy(deployment):
+    deploy, docker, env, _ = deployment
+    compose = env.parent / "compose.personal.yml"
+    compose.write_text(compose.read_text().replace("finbotagents.service.backend.runtime", "tradingagents.service.backend.runtime"))
+    original_run = deploy.run
+
+    def interrupted(args, **kwargs):
+        if args[:2] == ["docker", "compose"] and "up" in args:
+            raise KeyboardInterrupt()
+        return original_run(args, **kwargs)
+
+    deploy.run = interrupted
+    with pytest.raises(KeyboardInterrupt):
+        deploy.deploy(DIGEST, SHA)
+    assert (env.parent / "backups" / "deployment-pending.json").is_file()
+    deploy.run = original_run
+    with pytest.raises(host.DeploymentError, match="interrupted deployment"):
+        deploy.deploy(DIGEST, SHA)
+
+
+def test_unexpected_effective_compose_change_restores_original(deployment):
+    deploy, docker, env, original_env = deployment
+    compose = env.parent / "compose.personal.yml"
+    original = compose.read_text().replace("finbotagents.service.backend.runtime", "tradingagents.service.backend.runtime")
+    compose.write_text(original)
+    docker.changed_compose_other = True
+    with pytest.raises(host.DeploymentError, match="previous image restored"):
+        deploy.deploy(DIGEST, SHA)
+    assert compose.read_text() == original
+    assert env.read_text() == original_env
+    assert docker.updates == [OLD]
+
+
+def test_compose_symlink_is_rejected_before_any_restart(deployment, tmp_path):
+    deploy, docker, env, original = deployment
+    compose = env.parent / "compose.personal.yml"
+    target = tmp_path / "other-compose.yml"
+    target.write_text(compose.read_text())
+    compose.unlink()
+    compose.symlink_to(target)
+    with pytest.raises(host.DeploymentError, match="Unsafe Compose"):
+        deploy.deploy(DIGEST, SHA)
+    assert env.read_text() == original and docker.updates == []
+
+
+def test_running_new_image_with_legacy_compose_is_rejected(deployment):
+    deploy, docker, env, original = deployment
+    compose = env.parent / "compose.personal.yml"
+    compose.write_text(compose.read_text().replace("finbotagents.service.backend.runtime", "tradingagents.service.backend.runtime"))
+    env.write_text(original.replace(OLD, NEW))
+    docker.image = NEW
+    with pytest.raises(host.DeploymentError, match="legacy Compose"):
+        deploy.deploy(DIGEST, SHA)
+    assert docker.updates == []
 
 
 def test_deploy_preserves_private_settings_permissions_and_caddy(deployment):
