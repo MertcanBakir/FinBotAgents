@@ -22,8 +22,8 @@ from pathlib import Path
 
 from cli.models import AnalystType, AssetType
 from cli.prompts import LISTED_LIVE, _llm_provider_table, filter_analysts_for_asset_type
-from tradingagents.dataflows.files import replace_file
-from tradingagents.llm_clients.model_catalog import get_model_options
+from finbotagents.dataflows.files import replace_file
+from finbotagents.llm_clients.model_catalog import get_model_options
 
 _PREFS_PATH = Path(os.path.expanduser("~")) / ".tradingagents" / "cli_prefs.json"
 

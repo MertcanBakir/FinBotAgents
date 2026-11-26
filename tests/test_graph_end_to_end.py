@@ -19,12 +19,12 @@ from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.runnables import RunnableLambda
 from pydantic import Field
 
-from tradingagents.agents import context, schemas
-from tradingagents.agents.analysts import news_analyst
-from tradingagents.dataflows import router
-from tradingagents.dataflows.vendors.yahoo import market as yahoo_market, snapshot
-from tradingagents.default_config import DEFAULT_CONFIG
-from tradingagents.graph import trading_graph
+from finbotagents.agents import context, schemas
+from finbotagents.agents.analysts import news_analyst
+from finbotagents.dataflows import router
+from finbotagents.dataflows.vendors.yahoo import market as yahoo_market, snapshot
+from finbotagents.default_config import DEFAULT_CONFIG
+from finbotagents.graph import trading_graph
 
 TRADE_DATE = "2026-01-09"
 
@@ -116,11 +116,11 @@ def test_headless_service_real_graph_injects_user_memory_without_cli_side_effect
     from pathlib import Path
     from uuid import uuid4
 
-    from tradingagents.dataflows import config as data_config
-    from tradingagents.memory import settlement
-    from tradingagents.service.engine import AnalysisEngine
-    from tradingagents.service.memory import MemoryDecision, MemoryOutcome, SQLiteMemoryRepository
-    from tradingagents.service.models import AnalysisRequest, LLMChoice, ServiceSettings
+    from finbotagents.dataflows import config as data_config
+    from finbotagents.memory import settlement
+    from finbotagents.service.engine import AnalysisEngine
+    from finbotagents.service.memory import MemoryDecision, MemoryOutcome, SQLiteMemoryRepository
+    from finbotagents.service.models import AnalysisRequest, LLMChoice, ServiceSettings
 
     user = uuid4()
     memory = SQLiteMemoryRepository(tmp_path / "private.sqlite3")
@@ -218,7 +218,7 @@ def test_a_graph_reused_across_runs_keeps_no_run_state(tmp_path, monkeypatch, of
 
 @pytest.mark.unit
 def test_the_analysts_run_at_the_same_time(tmp_path, monkeypatch, offline):
-    from tradingagents.graph import setup
+    from finbotagents.graph import setup
 
     expected = {'market', 'macro', 'news', 'fundamentals'}
     entered, finished = set(), set()
@@ -301,7 +301,7 @@ def test_each_report_streams_as_soon_as_its_analyst_files_it(tmp_path, monkeypat
 def test_a_streamed_run_reads_its_own_graph_config(tmp_path, monkeypatch, offline):
     """The CLI streams the run; a process-wide config set elsewhere must not reach
     its tools, and the graph's config must not reach the caller between steps."""
-    from tradingagents.dataflows.config import get_config, set_config
+    from finbotagents.dataflows.config import get_config, set_config
 
     graph = _graph(tmp_path, monkeypatch, ScriptedModel(), output_language="French")
     set_config({"output_language": "German"})
@@ -341,7 +341,7 @@ def settlement_window(request, monkeypatch):
     and filter requested ranges so neither wall time nor unused future bars can
     make an incomplete window appear complete.
     """
-    from tradingagents.memory import settlement
+    from finbotagents.memory import settlement
 
     config = {} if request.param is None else {"holding_period_days": request.param}
     days = config.get("holding_period_days", DEFAULT_CONFIG["holding_period_days"])
@@ -383,7 +383,7 @@ def test_past_decisions_settle_alongside_the_analysts(tmp_path, monkeypatch, off
 @pytest.mark.unit
 def test_a_settlement_failure_is_noted_and_the_run_goes_on(tmp_path, monkeypatch, offline):
     """The analysts have spent their tokens by the time the join waits on settlement."""
-    from tradingagents.reporting import write_report_tree
+    from finbotagents.reporting import write_report_tree
 
     graph = _graph(tmp_path, monkeypatch, ScriptedModel(structured=True))
 
@@ -436,7 +436,7 @@ def test_the_memory_step_reads_lessons_as_of_the_trade_date_and_settles_once(tmp
 
 @pytest.mark.unit
 def test_decision_waits_for_the_full_configured_window(tmp_path, monkeypatch, settlement_window):
-    from tradingagents.memory import settlement
+    from finbotagents.memory import settlement
 
     config, decision_date, closes = settlement_window
     graph = _graph(tmp_path, monkeypatch, ScriptedModel(), **config)

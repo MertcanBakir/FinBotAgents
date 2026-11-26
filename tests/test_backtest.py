@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import pytest
 
-from tradingagents.backtest import iter_grid, run_backtest, summarize
-from tradingagents.memory import TradingMemoryLog
-from tradingagents.memory.settlement import Settlement
+from finbotagents.backtest import iter_grid, run_backtest, summarize
+from finbotagents.memory import TradingMemoryLog
+from finbotagents.memory.settlement import Settlement
 
 DECISION = "Rating: Buy\n\nbuy it"
 
@@ -24,7 +24,7 @@ def test_grid_spacing_and_canonical_dates():
 
 @pytest.mark.unit
 def test_grid_stops_at_today(monkeypatch):
-    import tradingagents.backtest as bt
+    import finbotagents.backtest as bt
 
     monkeypatch.setattr(bt, "get_current_date", lambda: "2026-01-10")
     assert iter_grid("2026-01-05", "2026-02-20", every_n_days=5) == ["2026-01-05", "2026-01-10"]
@@ -64,11 +64,11 @@ class _FakeGraph:
 
 @pytest.fixture(autouse=True)
 def _fake_graph(monkeypatch, tmp_path):
-    import tradingagents.backtest as bt
+    import finbotagents.backtest as bt
 
     _FakeGraph.instances = []
     _FakeGraph.fail_on = set()
-    monkeypatch.setattr(bt, "TradingAgentsGraph", _FakeGraph)
+    monkeypatch.setattr(bt, "FinBotAgentsGraph", _FakeGraph)
     return _FakeGraph
 
 
@@ -157,7 +157,7 @@ def test_the_analyst_set_under_test_is_the_one_that_runs(tmp_path):
 
 @pytest.mark.unit
 def test_sweeps_started_in_the_same_second_get_their_own_runs(tmp_path, monkeypatch):
-    import tradingagents.backtest as backtest
+    import finbotagents.backtest as backtest
 
     class _Frozen(backtest.datetime):
         @classmethod
@@ -206,7 +206,7 @@ def test_a_failed_settlement_does_not_lose_the_remaining_tickers(tmp_path, monke
 def test_handled_settlement_failures_reach_the_backtest_result(tmp_path, monkeypatch, failure):
     from types import SimpleNamespace
 
-    from tradingagents.memory import settlement
+    from finbotagents.memory import settlement
 
     def returns(ticker, *args, **kwargs):
         if ticker == "AAPL":
@@ -311,7 +311,7 @@ def test_the_window_reported_is_the_one_the_outcomes_used(tmp_path):
 @pytest.mark.unit
 def test_a_backtest_result_is_summarized_directly(tmp_path):
     """The result names its own log, so a caller never builds the log to score it."""
-    from tradingagents.backtest import BacktestResult
+    from finbotagents.backtest import BacktestResult
 
     path = _log_with(tmp_path, [("NVDA", "2026-01-05", "Rating: Buy\n\nx", (0.10, 0.04))])
 
@@ -329,7 +329,7 @@ def test_a_log_path_that_does_not_exist_is_an_error_not_an_empty_summary(tmp_pat
 
 @pytest.mark.unit
 def test_a_result_whose_cells_all_failed_summarizes_as_empty(tmp_path):
-    from tradingagents.backtest import BacktestResult
+    from finbotagents.backtest import BacktestResult
 
     result = BacktestResult(run_id="r", log_path=tmp_path / "never-written.md")
 

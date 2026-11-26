@@ -5,8 +5,8 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-import tradingagents.dataflows.vendors.yahoo.snapshot as validator
-from tradingagents.dataflows.errors import NoMarketDataError
+import finbotagents.dataflows.vendors.yahoo.snapshot as validator
+from finbotagents.dataflows.errors import NoMarketDataError
 
 
 def _sample_ohlcv() -> pd.DataFrame:
@@ -67,7 +67,7 @@ class TestVerifiedSnapshot:
 @pytest.mark.unit
 class TestTool:
     def test_tool_delegates_to_builder(self, monkeypatch):
-        from tradingagents.agents.tools import get_verified_market_snapshot
+        from finbotagents.agents.tools import get_verified_market_snapshot
         monkeypatch.setattr(validator, "load_ohlcv", lambda s, d, fill_gaps=True: _sample_ohlcv())
         out = get_verified_market_snapshot.invoke(
             {"symbol": "COF", "curr_date": "2026-05-20"}
@@ -89,7 +89,7 @@ class TestPricesKeepTheirDigits:
         (0.0, "0.00"),
     ])
     def test_price_text(self, value, text):
-        from tradingagents.dataflows.vendors.yahoo.common import price_text
+        from finbotagents.dataflows.vendors.yahoo.common import price_text
         assert price_text(value) == text
 
     def test_the_snapshot_shows_a_sub_cent_close(self, monkeypatch):
@@ -101,7 +101,7 @@ class TestPricesKeepTheirDigits:
         assert "| Close | 0.0000135 |" in text and "| Close | 0.00 |" not in text
 
     def test_the_price_table_shows_a_sub_cent_close(self, monkeypatch):
-        from tradingagents.dataflows.vendors.yahoo import market
+        from finbotagents.dataflows.vendors.yahoo import market
 
         days = pd.bdate_range("2026-05-11", "2026-05-15")
         frame = pd.DataFrame({"Open": 0.00000501, "High": 0.00000512, "Low": 0.00000499,

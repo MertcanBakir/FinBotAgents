@@ -13,8 +13,8 @@ from unittest import mock
 
 import pytest
 
-from tradingagents.dataflows.errors import NoMarketDataError
-from tradingagents.dataflows.vendors import sec_edgar
+from finbotagents.dataflows.errors import NoMarketDataError
+from finbotagents.dataflows.vendors import sec_edgar
 
 _REAL_FETCH = sec_edgar._fetch_json
 
@@ -145,7 +145,7 @@ def test_a_throttle_lets_the_next_vendor_try(monkeypatch):
     """SEC throttles by refusing the request; the router then tries yfinance."""
     import requests
 
-    from tradingagents.dataflows.errors import VendorUnavailableError
+    from finbotagents.dataflows.errors import VendorUnavailableError
 
     def _throttled(*a, **k):
         raise requests.HTTPError(response=mock.Mock(status_code=429))
@@ -183,7 +183,7 @@ def test_every_row_has_one_cell_per_column():
 def test_a_server_error_lets_the_next_vendor_try(monkeypatch):
     import requests
 
-    from tradingagents.dataflows.errors import VendorError
+    from finbotagents.dataflows.errors import VendorError
 
     def _server_error(*a, **k):
         raise requests.HTTPError(response=mock.Mock(status_code=503))
@@ -220,10 +220,10 @@ def test_a_period_reported_under_two_tags_takes_the_preferred_one_not_both():
 @pytest.mark.unit
 def test_the_default_identification_names_the_package_version(monkeypatch):
     """SEC asks automated clients to identify themselves; a release names its own version."""
-    import tradingagents
+    import finbotagents
 
     monkeypatch.delenv("SEC_EDGAR_USER_AGENT", raising=False)
-    assert sec_edgar._user_agent() == f"TradingAgents/{tradingagents.__version__} (contact@example.com)"
+    assert sec_edgar._user_agent() == f"TradingAgents/{finbotagents.__version__} (contact@example.com)"
 
 
 @pytest.mark.unit

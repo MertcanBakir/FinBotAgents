@@ -2,10 +2,10 @@ from unittest.mock import Mock
 
 from fastapi.testclient import TestClient
 
+from finbotagents.service.backend.api import create_app
+from finbotagents.service.backend.health import ResourceMonitor
+from finbotagents.service.errors import AnalysisServiceError
 from tests.test_hosted_backend import settings
-from tradingagents.service.backend.api import create_app
-from tradingagents.service.backend.health import ResourceMonitor
-from tradingagents.service.errors import AnalysisServiceError
 
 
 def _proc(tmp_path, *, busy=100, idle=900, available=600):

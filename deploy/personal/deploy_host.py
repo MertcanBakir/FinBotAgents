@@ -25,8 +25,8 @@ REPOSITORY = "500888846202.dkr.ecr.eu-west-1.amazonaws.com/lucrari/tradingagents
 PROBE = """
 import json
 try:
-    from tradingagents.service.backend.runtime import settings_from_env
-    from tradingagents.service.backend.repository import Repository
+    from finbotagents.service.backend.runtime import settings_from_env
+    from finbotagents.service.backend.repository import Repository
     repo = Repository(settings_from_env())
     models = repo.provider_models('chatgpt')
     with repo.transaction() as conn:

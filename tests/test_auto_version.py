@@ -78,12 +78,12 @@ def test_version_reader_extracts_the_version_from_the_exact_commit(tmp_path, mon
 def test_pr_update_uses_base_version_and_updates_only_version_files(monkeypatch):
     import base64
 
-    project = '[tool.setuptools.dynamic]\nversion = {attr = "tradingagents.__version__"}\n'
+    project = '[tool.setuptools.dynamic]\nversion = {attr = "finbotagents.__version__"}\n'
     files = {
         ('pyproject.toml', 'a' * 40): project,
         ('pyproject.toml', 'b' * 40): project,
-        ('tradingagents/__init__.py', 'a' * 40): '__version__ = "0.8.0"\n',
-        ('tradingagents/__init__.py', 'b' * 40): '__version__ = "0.8.0"\n',
+        ('finbotagents/__init__.py', 'a' * 40): '__version__ = "0.8.0"\n',
+        ('finbotagents/__init__.py', 'b' * 40): '__version__ = "0.8.0"\n',
         ('README.md', 'b' * 40): '# FinBotAgents — v0.8.0\n',
     }
     requests = []
@@ -106,7 +106,7 @@ def test_pr_update_uses_base_version_and_updates_only_version_files(monkeypatch)
     monkeypatch.setattr(module, 'github_api', api)
     module.update_pull_request('owner/repo', '12', 'test')
     tree = next(data for path, method, data in requests if path.endswith('/git/trees'))
-    assert {item['path'] for item in tree['tree']} == {'README.md', 'tradingagents/__init__.py'}
+    assert {item['path'] for item in tree['tree']} == {'README.md', 'finbotagents/__init__.py'}
     assert all('0.9.0' in item['content'] for item in tree['tree'])
     assert requests[-1][2] == {'sha': 'newcommit', 'force': False}
 

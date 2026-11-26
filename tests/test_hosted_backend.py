@@ -14,17 +14,17 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-from tradingagents.service.backend.api import create_app
-from tradingagents.service.backend.contracts import BackendSettings
-from tradingagents.service.backend.evaluation import evaluation_sessions, make_outcome
-from tradingagents.service.backend.providers import ProviderProbe, endpoint
-from tradingagents.service.backend.security import SecretVault, SupabaseAuthenticator
-from tradingagents.service.backend.storage import ReportStorage
-from tradingagents.service.backend.worker import Worker
-from tradingagents.service.errors import AnalysisServiceError
-from tradingagents.service.memory import MemoryDecision
-from tradingagents.service.models import AnalysisRequest, ServiceSettings
-from tradingagents.service.normalize import normalize_result
+from finbotagents.service.backend.api import create_app
+from finbotagents.service.backend.contracts import BackendSettings
+from finbotagents.service.backend.evaluation import evaluation_sessions, make_outcome
+from finbotagents.service.backend.providers import ProviderProbe, endpoint
+from finbotagents.service.backend.security import SecretVault, SupabaseAuthenticator
+from finbotagents.service.backend.storage import ReportStorage
+from finbotagents.service.backend.worker import Worker
+from finbotagents.service.errors import AnalysisServiceError
+from finbotagents.service.memory import MemoryDecision
+from finbotagents.service.models import AnalysisRequest, ServiceSettings
+from finbotagents.service.normalize import normalize_result
 
 
 def settings(**overrides):
@@ -42,6 +42,11 @@ def settings(**overrides):
             | overrides
         )
     )
+
+
+def test_backend_settings_reject_removed_allowed_user_ids():
+    with pytest.raises(ValidationError):
+        settings(allowed_user_ids=(uuid4(),))
 
 
 @pytest.fixture
@@ -376,7 +381,7 @@ def worker_result(job_id):
 def test_worker_success_error_boundaries_and_no_graph_retry(failure, monkeypatch):
     import json
 
-    from tradingagents.service.backend import worker as module
+    from finbotagents.service.backend import worker as module
 
     repo, storage = MagicMock(), MagicMock()
     repo.settings = settings()
@@ -473,7 +478,7 @@ def test_raw_backend_exception_not_leaked_to_response_or_logs(http_api, caplog):
 
 
 def test_orphan_cleanup_defaults_readonly_and_never_deletes_referenced_report():
-    from tradingagents.service.backend.maintenance import cleanup_orphans
+    from finbotagents.service.backend.maintenance import cleanup_orphans
 
     repo, storage = MagicMock(), MagicMock()
     repo.orphan_reports.return_value = [{"name": "referenced"}, {"name": "orphan"}]
@@ -506,7 +511,7 @@ def test_chunked_body_limit_without_content_length(http_api):
 def test_uncertain_finalization_does_not_delete_committed_report(monkeypatch):
     import json
 
-    from tradingagents.service.backend import worker as module
+    from finbotagents.service.backend import worker as module
 
     repo, storage = MagicMock(), MagicMock()
     repo.settings = settings()
@@ -550,7 +555,7 @@ def test_uncertain_finalization_does_not_delete_committed_report(monkeypatch):
 
 
 def test_orphan_cleanup_refuses_foreign_or_malformed_names():
-    from tradingagents.service.backend.maintenance import cleanup_orphans
+    from finbotagents.service.backend.maintenance import cleanup_orphans
 
     repo = MagicMock()
     repo.orphan_reports.return_value = [{"name": "../../foreign"}, {"name": "manual-file.json"}]
@@ -562,8 +567,8 @@ def test_orphan_cleanup_refuses_foreign_or_malformed_names():
 
 
 def test_child_uses_only_owner_key_and_clears_inherited_provider_credentials(tmp_path, monkeypatch):
-    from tradingagents.llm_clients.api_key_env import PROVIDER_API_KEY_ENV
-    from tradingagents.service.backend import worker as module
+    from finbotagents.llm_clients.api_key_env import PROVIDER_API_KEY_ENV
+    from finbotagents.service.backend import worker as module
 
     repo = MagicMock()
     repo.settings = settings()
@@ -600,7 +605,7 @@ def test_child_uses_only_owner_key_and_clears_inherited_provider_credentials(tmp
         def run(self, request, *, user_id, analysis_id):
             import os
 
-            from tradingagents.llm_clients.tier_credentials import credential_for
+            from finbotagents.llm_clients.tier_credentials import credential_for
             assert credential_for("quick", "openai") == "owner-only-private-key"
             assert credential_for("deep", "openai") == "owner-only-private-key"
             assert all(

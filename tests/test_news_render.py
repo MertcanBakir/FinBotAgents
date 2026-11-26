@@ -3,13 +3,13 @@ from unittest.mock import MagicMock
 
 from langchain_core.messages import AIMessage
 
-from tradingagents.agents.analyst_support.insider_sales import prepare_insider_sales
-from tradingagents.agents.analyst_support.news_render import (
+from finbotagents.agents.analyst_support.insider_sales import prepare_insider_sales
+from finbotagents.agents.analyst_support.news_render import (
     compose_news_report,
     insider_table,
     social_sample_line,
 )
-from tradingagents.agents.analysts import news_analyst
+from finbotagents.agents.analysts import news_analyst
 
 
 def _sales():

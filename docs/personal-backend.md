@@ -80,7 +80,7 @@ upstream OAuth or mix this registration with another local account.
    live model list automatically; adding a new personal model requires no
    configuration edit or service restart.
 
-Admin commands use `python -m tradingagents.service.backend.runtime session ...`
+Admin commands use `python -m finbotagents.service.backend.runtime session ...`
 with the settings file configured. `session --action login` also supports the
 upstream remote terminal/pasted-redirect flow, but must be interactive and must
 not be captured in shared logs. Prefer the documented local OAuth/secure import

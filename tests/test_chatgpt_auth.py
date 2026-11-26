@@ -19,7 +19,7 @@ import pytest
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
-from tradingagents.llm_clients import chatgpt_auth as auth
+from finbotagents.llm_clients import chatgpt_auth as auth
 
 # The suite refuses all connections; the loopback test lets 127.0.0.1 through only.
 _CONNECT, _GETADDRINFO = socket.socket.connect, socket.getaddrinfo
@@ -143,9 +143,9 @@ def test_an_id_token_signed_by_another_key_is_refused():
 
 @pytest.mark.unit
 def test_nobody_signed_in_is_told_how_to_sign_in(home, openai):
-    with pytest.raises(auth.ChatGPTAuthError, match="tradingagents login chatgpt"):
+    with pytest.raises(auth.ChatGPTAuthError, match="finbotagents login chatgpt"):
         auth.credential()
-    with pytest.raises(auth.ChatGPTAuthError, match="tradingagents login chatgpt"):
+    with pytest.raises(auth.ChatGPTAuthError, match="finbotagents login chatgpt"):
         auth.access_token()
     assert openai.posts == []
 

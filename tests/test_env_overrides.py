@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-import tradingagents.default_config as default_config_module
+import finbotagents.default_config as default_config_module
 
 
 def _config_with_env(monkeypatch, **overrides):

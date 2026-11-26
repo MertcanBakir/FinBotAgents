@@ -1,7 +1,6 @@
 """The interactive choices for a run: ticker, date, analysts, depth, provider and models."""
 
 import datetime
-import os
 from pathlib import Path
 
 import typer
@@ -36,10 +35,10 @@ from cli.prompts import (
     select_research_depth,
     select_shallow_thinking_agent,
 )
-from tradingagents.default_config import DEFAULT_CONFIG
-from tradingagents.horizons import HORIZON_LABELS, parse_analysis_horizon
-from tradingagents.llm_clients.factory import REASONING_EFFORT_PROVIDERS
-from tradingagents.llm_clients.openai_client import check_endpoint
+from finbotagents.default_config import DEFAULT_CONFIG, brand_env
+from finbotagents.horizons import HORIZON_LABELS, parse_analysis_horizon
+from finbotagents.llm_clients.factory import REASONING_EFFORT_PROVIDERS
+from finbotagents.llm_clients.openai_client import check_endpoint
 
 
 def get_user_selections(flags=None):
@@ -51,23 +50,23 @@ def get_user_selections(flags=None):
 
 def depth_from_env() -> bool:
     """Both round counts come from the environment, so the depth question is skipped."""
-    return bool(os.environ.get("TRADINGAGENTS_MAX_DEBATE_ROUNDS")
-                and os.environ.get("TRADINGAGENTS_MAX_RISK_ROUNDS"))
+    return bool(brand_env("TRADINGAGENTS_MAX_DEBATE_ROUNDS")
+                and brand_env("TRADINGAGENTS_MAX_RISK_ROUNDS"))
 
 
 def unattended_gaps(flags) -> list[str]:
     """The flags and environment variables a run with no terminal still needs."""
-    env = os.environ.get
+    env = brand_env
     gaps = [f"--{name}" for name in ("ticker", "date", "horizon", "analysts") if flags.get(name) is None]
     gaps += [f"--{name} or --no-{name}" for name in ("save", "show") if flags.get(name) is None]
     if not env("TRADINGAGENTS_OUTPUT_LANGUAGE"):
-        gaps.append("TRADINGAGENTS_OUTPUT_LANGUAGE")
+        gaps.append("FINBOTAGENTS_OUTPUT_LANGUAGE")
     if not depth_from_env():
-        gaps.append("TRADINGAGENTS_MAX_DEBATE_ROUNDS and TRADINGAGENTS_MAX_RISK_ROUNDS")
+        gaps.append("FINBOTAGENTS_MAX_DEBATE_ROUNDS and FINBOTAGENTS_MAX_RISK_ROUNDS")
     if not env("TRADINGAGENTS_LLM_PROVIDER"):
-        gaps.append("TRADINGAGENTS_LLM_PROVIDER")
+        gaps.append("FINBOTAGENTS_LLM_PROVIDER")
     if not (env("TRADINGAGENTS_QUICK_THINK_LLM") or env("TRADINGAGENTS_DEEP_THINK_LLM")):
-        gaps.append("TRADINGAGENTS_QUICK_THINK_LLM or TRADINGAGENTS_DEEP_THINK_LLM")
+        gaps.append("FINBOTAGENTS_QUICK_THINK_LLM or FINBOTAGENTS_DEEP_THINK_LLM")
     return gaps
 
 
@@ -86,7 +85,7 @@ def _check_tier_providers(main_provider: str, backend_url: str | None = None) ->
         on_main = provider == main_provider.lower()
         if not on_main:
             variable = f"TRADINGAGENTS_{tier.upper()}_THINK_LLM"
-            if not os.environ.get(variable):
+            if not brand_env(variable):
                 console.print(f"[red]The {tier} tier runs on {provider}; set {variable} to one of its models.[/red]")
                 raise typer.Exit(code=1)
         # The tier's endpoint, as create_tier_client resolves it.
@@ -150,7 +149,7 @@ def _prompt_selections(prefs, flags):
         the env overlay placed on DEFAULT_CONFIG is used — mirroring the
         env-precedence rule applied to the other selection steps.
         """
-        if os.environ.get(env_var):
+        if brand_env(env_var):
             value = DEFAULT_CONFIG[config_key]
             console.print(f"[green]✓ {label} from environment:[/green] {value}")
             return value
@@ -201,7 +200,7 @@ def _prompt_selections(prefs, flags):
     console.print(f"[green]✓ Analysis horizon:[/green] {HORIZON_LABELS[analysis_horizon]['en']}")
 
     # Step 4: Output language (skipped when set via TRADINGAGENTS_OUTPUT_LANGUAGE)
-    if os.environ.get("TRADINGAGENTS_OUTPUT_LANGUAGE"):
+    if brand_env("TRADINGAGENTS_OUTPUT_LANGUAGE"):
         output_language = DEFAULT_CONFIG["output_language"]
         console.print(
             f"[green]✓ Output language from environment:[/green] {output_language}"
@@ -253,7 +252,7 @@ def _prompt_selections(prefs, flags):
     # The backend URL comes from TRADINGAGENTS_LLM_BACKEND_URL when set,
     # otherwise the provider's default endpoint — the same value the menu
     # would have picked.
-    provider_from_env = bool(os.environ.get("TRADINGAGENTS_LLM_PROVIDER"))
+    provider_from_env = bool(brand_env("TRADINGAGENTS_LLM_PROVIDER"))
     if provider_from_env:
         selected_llm_provider = DEFAULT_CONFIG["llm_provider"].lower()
         backend_url = resolve_backend_url(
@@ -295,7 +294,7 @@ def _prompt_selections(prefs, flags):
     _check_tier_providers(selected_llm_provider, backend_url)
 
     # Step 8: Thinking agents (skipped when either model is set via environment)
-    if os.environ.get("TRADINGAGENTS_QUICK_THINK_LLM") or os.environ.get("TRADINGAGENTS_DEEP_THINK_LLM"):
+    if brand_env("TRADINGAGENTS_QUICK_THINK_LLM") or brand_env("TRADINGAGENTS_DEEP_THINK_LLM"):
         selected_shallow_thinker = DEFAULT_CONFIG["quick_think_llm"]
         selected_deep_thinker = DEFAULT_CONFIG["deep_think_llm"]
         console.print(

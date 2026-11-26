@@ -127,8 +127,8 @@ def _isolate_config():
     """
     import copy
 
-    import tradingagents.dataflows.config as config_module
-    import tradingagents.default_config as default_config
+    import finbotagents.dataflows.config as config_module
+    import finbotagents.default_config as default_config
 
     config_module._config = copy.deepcopy(default_config.DEFAULT_CONFIG)
     yield

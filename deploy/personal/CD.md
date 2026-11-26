@@ -53,9 +53,16 @@ Repository variables:
 
 | Variable | Value |
 | --- | --- |
+| `AWS_ACCOUNT_ID` | `500888846202` |
+| `EC2_INSTANCE_ID` | `i-0cc2d47020ed7347c` |
 | `AWS_PUBLISH_ROLE_ARN` | ARN of `FinBotTradingAgentsGitHubPublishRole` |
 | `AWS_DEPLOY_ROLE_ARN` | ARN of `FinBotTradingAgentsGitHubDeployRole` |
 | `PRODUCTION_DEPLOY_ENABLED` | **`false` until the first live deployment is approved** |
+
+Set both target variables before enabling publication and deployment. Missing or
+unexpected values fail validation before AWS credentials are requested. The
+approved target remains pinned independently in the workflow and IAM policy;
+changing a variable alone cannot authorize a different account or instance.
 
 The immutable OIDC subject prefix in the template is specific to
 `MertcanBakir/FinBotAgents` (owner ID `151876718`, repository ID `1461057831`).

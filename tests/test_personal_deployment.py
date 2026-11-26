@@ -387,6 +387,14 @@ def test_ssm_arguments_cannot_inject_shell_commands():
             deploy_request.parameters(*values)
 
 
+def test_deployment_target_rejects_missing_or_unapproved_values():
+    assert deploy_request.validate_target("500888846202", "i-0cc2d47020ed7347c") == "i-0cc2d47020ed7347c"
+    for account, instance in [("", "i-0cc2d47020ed7347c"), ("123456789012", "i-0cc2d47020ed7347c"),
+                              ("500888846202", ""), ("500888846202", "i-12345678901234567")]:
+        with pytest.raises(ValueError):
+            deploy_request.validate_target(account, instance)
+
+
 @pytest.mark.parametrize("versioned", [False, True])
 def test_ssm_document_selects_hash_verified_legacy_or_versioned_helper(tmp_path, versioned):
     document = json.loads((Path(__file__).resolve().parents[1] / "deploy/personal/ssm-deploy.json").read_text())

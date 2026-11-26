@@ -10,7 +10,7 @@ from importlib.resources import files
 
 import pytest
 
-from tradingagents.reporting import write_report_tree
+from finbotagents.reporting import write_report_tree
 
 SETTINGS = {"version": "1.2.3", "llm_provider": "openai", "deep_think_llm": "gpt-6-sol",
             "quick_think_llm": "gpt-6-luna", "analysts": ["market", "news"], "max_debate_rounds": 1,
@@ -146,7 +146,7 @@ def test_the_page_heading_is_the_ticker_and_its_rating(tmp_path):
 
 @pytest.mark.unit
 def test_the_header_carries_the_official_logo_unaltered(tmp_path):
-    logo = files("tradingagents").joinpath("assets/finbotagents.png").read_bytes()
+    logo = files("assets").joinpath("finbotagents.png").read_bytes()
     page = _html(tmp_path)
     header = page[page.index("<header"):page.index("</header>")]
     embedded = re.search(r'src="data:image/png;base64,([^"]+)"', header)[1]
@@ -155,6 +155,22 @@ def test_the_header_carries_the_official_logo_unaltered(tmp_path):
     assert 'href="https://github.com/MertcanBakir/FinBotAgents"' in header
     assert 'alt="FinBotAgents"' in header
     assert header.index('class="logo"') < header.index("<h1")   # leads the header, above the title
+
+
+def test_report_logo_ignores_unrelated_assets_package(tmp_path):
+    import os
+    import subprocess
+    import sys
+
+    foreign = tmp_path / "assets"
+    foreign.mkdir()
+    (foreign / "__init__.py").write_text("")
+    env = {**os.environ, "PYTHONPATH": str(tmp_path)}
+    result = subprocess.run(
+        [sys.executable, "-c", "import finbotagents.report_html"],
+        cwd=tmp_path, env=env, capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.unit

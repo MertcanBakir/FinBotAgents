@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tradingagents.llm_clients.factory import create_llm_client
+from finbotagents.llm_clients.factory import create_llm_client
 
 
 @pytest.fixture(autouse=True)

@@ -202,10 +202,10 @@ localhost/127.0.0.1/host.docker.internal. There is no default production DSN/key
 
 For local subprocess mode only, set `LUCRARI_DISPATCHER=local-process`, then run:
 ```
-uvicorn tradingagents.service.backend.runtime:application --factory --host 127.0.0.1 --port 8000 --no-access-log
-python -m tradingagents.service.backend.runtime reap
-python -m tradingagents.service.backend.runtime evaluate
-python -m tradingagents.service.backend.runtime cleanup
+uvicorn finbotagents.service.backend.runtime:application --factory --host 127.0.0.1 --port 8000 --no-access-log
+python -m finbotagents.service.backend.runtime reap
+python -m finbotagents.service.backend.runtime evaluate
+python -m finbotagents.service.backend.runtime cleanup
 ```
 `evaluate` uses real market HTTP in an operational run; don't run it against live
 data/DB until approved. Merely importing modules or generating OpenAPI does not

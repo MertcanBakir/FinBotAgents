@@ -25,4 +25,4 @@ COPY --from=builder /build/deploy/migrations /opt/finbot-migrations
 COPY --from=builder /build/deploy/personal/migrate.py /opt/finbot-migrations/runner.py
 RUN python /opt/finbot-migrations/runner.py --validate
 COPY --from=builder /build/deploy/transitions /opt/finbot-transitions
-ENTRYPOINT ["python", "-m", "tradingagents.service.cli"]
+ENTRYPOINT ["python", "-m", "finbotagents.service.cli"]

@@ -74,7 +74,7 @@ def test_without_a_terminal_every_unanswered_question_is_named_before_the_run(mo
         run.run_analysis(flags={"ticker": "NVDA"})
 
     out = capsys.readouterr().out
-    for needed in ("--date", "--horizon", "--analysts", "--save", "--show", "TRADINGAGENTS_LLM_PROVIDER"):
+    for needed in ("--date", "--horizon", "--analysts", "--save", "--show", "FINBOTAGENTS_LLM_PROVIDER"):
         assert needed in out
     assert "--ticker" not in out
 
@@ -104,7 +104,7 @@ def test_save_and_show_answer_the_questions_after_the_run(monkeypatch, tmp_path)
     monkeypatch.setattr(run, "_graphical_browser", lambda: _Browser())   # even at a desktop
     shown = []
     monkeypatch.setattr(run, "display_complete_report", lambda state, **kwargs: shown.append(state))
-    from tradingagents.graph.trading_graph import TradingAgentsGraph
+    from finbotagents.graph.trading_graph import TradingAgentsGraph
 
     graph = object.__new__(TradingAgentsGraph)
     graph.config = {"results_dir": str(tmp_path)}
@@ -215,7 +215,7 @@ def test_each_tier_provider_s_key_is_checked_before_the_run(monkeypatch):
 
 
 def _report_graph(tmp_path):
-    from tradingagents.graph.trading_graph import TradingAgentsGraph
+    from finbotagents.graph.trading_graph import TradingAgentsGraph
 
     graph = object.__new__(TradingAgentsGraph)
     graph.config = {"results_dir": str(tmp_path)}

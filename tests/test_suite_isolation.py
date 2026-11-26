@@ -53,6 +53,6 @@ def test_the_suite_keeps_its_files_out_of_the_users_home(key):
     or fails with it; one that writes there changes their data."""
     from pathlib import Path
 
-    from tradingagents.default_config import DEFAULT_CONFIG
+    from finbotagents.default_config import DEFAULT_CONFIG
 
     assert not Path(DEFAULT_CONFIG[key]).is_relative_to(Path.home() / ".tradingagents")

@@ -3,10 +3,10 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
-from tradingagents.agents.tools import get_valuation_benchmarks
-from tradingagents.dataflows.config import run_config
-from tradingagents.dataflows.vendors import fmp
-from tradingagents.dataflows.vendors.yahoo import outlook, valuation
+from finbotagents.agents.tools import get_valuation_benchmarks
+from finbotagents.dataflows.config import run_config
+from finbotagents.dataflows.vendors import fmp
+from finbotagents.dataflows.vendors.yahoo import outlook, valuation
 
 pytestmark = pytest.mark.unit
 DAY = "2026-11-13"

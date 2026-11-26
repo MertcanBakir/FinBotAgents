@@ -7,7 +7,7 @@ behavior is preserved. The final public API contract is a separate phase.
 
 ## Safe validation (no providers, database or browser)
 
-    .venv/bin/python -m tradingagents.service.cli \
+    .venv/bin/python -m finbotagents.service.cli \
       --request examples/service-request.json \
       --settings examples/service-settings.json \
       --user-id 11111111-1111-4111-8111-111111111111
@@ -20,12 +20,12 @@ supply credentials, endpoints or paths.
 ## Explicit execution (uses your plan/API and fetches market data)
 
 Configure credentials using the upstream provider setup. ChatGPT plan users sign
-in through the existing tradingagents login chatgpt command. Never put tokens in
+in through the `finbotagents login chatgpt` command. Never put tokens in
 source control/images. Multi-user cloud authorization is a separate decision;
 local OAuth success does not establish permission to serve other users.
 
     mkdir -p local-data
-    .venv/bin/python -m tradingagents.service.cli \
+    .venv/bin/python -m finbotagents.service.cli \
       --request examples/service-request.json \
       --settings examples/service-settings.json \
       --user-id 11111111-1111-4111-8111-111111111111 \

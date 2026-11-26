@@ -1,11 +1,11 @@
 # Analyst code organization
 
-`tradingagents/agents/analysts/` contains only analyst factories and their graph
+`finbotagents/agents/analysts/` contains only analyst factories and their graph
 node implementations. Those files orchestrate sources, prompts, model invocation
 and state updates; they do not define helper functions. The nested graph node
 returned by a factory is the agent entry point, not a helper.
 
-`tradingagents/agents/analyst_support/` owns supporting implementation:
+`finbotagents/agents/analyst_support/` owns supporting implementation:
 
 | Module | Responsibility |
 | --- | --- |

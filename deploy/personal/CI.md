@@ -30,7 +30,8 @@ separate [opt-in CD pipeline](CD.md); CI itself never requests AWS credentials.
 - **coverage report**: combines line and branch coverage from the Python 3.13 UTC
   and PostgreSQL jobs. The workflow summary shows combined totals and changed-line
   coverage on PRs, counting partially covered branches as uncovered. The `coverage-reports` artifact contains HTML, XML and Markdown.
-  Coverage percentages are informational.
+  The combined report must meet at least 85% line coverage and 85% branch coverage
+  independently. Both are checked using unrounded counts; missing data fails the check.
 - **CI passed**: succeeds only when every required job succeeds. This is the
   stable check name to require in the GitHub `main` branch rules.
 
@@ -64,14 +65,14 @@ python -m pip check
 python -m pytest -q --junitxml=test-results/junit.xml
 ruff check .
 
-docker build --platform linux/arm64 -f Dockerfile.worker --target test -t tradingagents-worker-tests:ci .
-docker build --platform linux/arm64 -f Dockerfile.worker -t tradingagents-worker:ci .
+docker build --platform linux/arm64 -f Dockerfile.worker --target test -t finbotagents-worker-tests:ci .
+docker build --platform linux/arm64 -f Dockerfile.worker -t finbotagents-worker:ci .
 docker run --rm --platform linux/arm64 \
   --read-only --network none --cap-drop ALL \
   --security-opt no-new-privileges --pids-limit 256 \
   --tmpfs /tmp:rw,nosuid,nodev,size=256m,mode=1777 \
   --mount "type=bind,source=$(pwd)/deploy/personal/container_smoke.py,target=/tmp/container_smoke.py,readonly" \
-  --entrypoint python tradingagents-worker:ci /tmp/container_smoke.py
+  --entrypoint python finbotagents-worker:ci /tmp/container_smoke.py
 ```
 
 Docker must be running. An ARM64 host or ARM64 emulation is required locally;

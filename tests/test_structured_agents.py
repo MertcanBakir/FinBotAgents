@@ -12,9 +12,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from tradingagents.agents.managers.portfolio_manager import create_portfolio_manager
-from tradingagents.agents.managers.research_manager import create_research_manager
-from tradingagents.agents.schemas import (
+from finbotagents.agents.managers.portfolio_manager import create_portfolio_manager
+from finbotagents.agents.managers.research_manager import create_research_manager
+from finbotagents.agents.schemas import (
     PortfolioDecision,
     PortfolioRating,
     ResearchPlan,
@@ -23,7 +23,7 @@ from tradingagents.agents.schemas import (
     render_research_plan,
     render_trader_proposal,
 )
-from tradingagents.agents.trader.trader import create_trader
+from finbotagents.agents.trader.trader import create_trader
 
 # ---------------------------------------------------------------------------
 # Render functions
@@ -192,7 +192,7 @@ def _structured_trader_llm(captured: dict, proposal: TraderProposal | None = Non
 def test_invoke_structured_falls_back_when_result_is_none():
     # A thinking model can answer in plain text, leaving the parser with None.
     # That must fall back to free text, not crash on render(None) (#1051).
-    from tradingagents.agents.structured import invoke_structured_or_freetext
+    from finbotagents.agents.structured import invoke_structured_or_freetext
 
     structured = MagicMock()
     structured.invoke.return_value = None
@@ -381,7 +381,7 @@ def test_a_price_written_as_a_range_drops_only_that_field(written):
     """Anything that is not a single number becomes None. Letting it through
     fails the whole decision's validation, and the run falls back to free text,
     losing every other field the model got right."""
-    from tradingagents.agents.schemas import PortfolioDecision, PortfolioRating
+    from finbotagents.agents.schemas import PortfolioDecision, PortfolioRating
 
     decision = PortfolioDecision(rating=PortfolioRating.BUY, executive_summary="s",
                                  investment_thesis="t", price_target=written)
@@ -390,7 +390,7 @@ def test_a_price_written_as_a_range_drops_only_that_field(written):
 
 @pytest.mark.unit
 def test_a_price_that_is_a_number_survives():
-    from tradingagents.agents.schemas import PortfolioDecision, PortfolioRating
+    from finbotagents.agents.schemas import PortfolioDecision, PortfolioRating
 
     decision = PortfolioDecision(rating=PortfolioRating.BUY, executive_summary="s",
                                  investment_thesis="t", price_target="$1,150.25")
@@ -400,7 +400,7 @@ def test_a_price_that_is_a_number_survives():
 @pytest.mark.unit
 def test_a_field_the_model_did_not_give_says_so():
     """An omitted line and a line never asked for read the same to an analyst."""
-    from tradingagents.agents.schemas import PortfolioDecision, PortfolioRating, render_pm_decision
+    from finbotagents.agents.schemas import PortfolioDecision, PortfolioRating, render_pm_decision
 
     rendered = render_pm_decision(PortfolioDecision(
         rating=PortfolioRating.HOLD, executive_summary="s", investment_thesis="t"), horizon_label="Short (1 month)")
@@ -409,7 +409,7 @@ def test_a_field_the_model_did_not_give_says_so():
 
 @pytest.mark.unit
 def test_the_trader_names_the_levels_it_did_not_give():
-    from tradingagents.agents.schemas import TraderAction, TraderProposal, render_trader_proposal
+    from finbotagents.agents.schemas import TraderAction, TraderProposal, render_trader_proposal
 
     rendered = render_trader_proposal(TraderProposal(action=TraderAction.HOLD, reasoning="r"))
     for field in ("Entry Price", "Stop Loss", "Position Sizing"):

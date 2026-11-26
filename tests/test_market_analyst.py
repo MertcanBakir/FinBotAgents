@@ -5,13 +5,13 @@ import pandas as pd
 import pytest
 from langchain_core.messages import AIMessage
 
-from tradingagents.agents.analysts import market_analyst as market
-from tradingagents.dataflows.errors import NoMarketDataError, VendorUnavailableError
-from tradingagents.dataflows.vendors.yahoo.candles import latest_daily_candle
-from tradingagents.horizons import HORIZON_CONFIG
-from tradingagents.technical_analysis import indicators, reporting
-from tradingagents.technical_analysis.reporting import render_zones
-from tradingagents.technical_analysis.zones import (
+from finbotagents.agents.analysts import market_analyst as market
+from finbotagents.dataflows.errors import NoMarketDataError, VendorUnavailableError
+from finbotagents.dataflows.vendors.yahoo.candles import latest_daily_candle
+from finbotagents.horizons import HORIZON_CONFIG
+from finbotagents.technical_analysis import indicators, reporting
+from finbotagents.technical_analysis.reporting import render_zones
+from finbotagents.technical_analysis.zones import (
     ZoneEvidence,
     calculate_scipy_zones,
 )

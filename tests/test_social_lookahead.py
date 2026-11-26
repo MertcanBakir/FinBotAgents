@@ -12,8 +12,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from tradingagents.dataflows.date_window import in_window
-from tradingagents.dataflows.vendors import stocktwits
+from finbotagents.dataflows.date_window import in_window
+from finbotagents.dataflows.vendors import stocktwits
 
 
 class _JsonResp:

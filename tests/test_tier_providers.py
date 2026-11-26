@@ -8,8 +8,8 @@ provider's URL, and the run's settings and report say which provider each used.
 
 import pytest
 
-from tradingagents import default_config
-from tradingagents.llm_clients import factory
+from finbotagents import default_config
+from finbotagents.llm_clients import factory
 
 
 def _config(**overrides):
@@ -65,8 +65,8 @@ def test_a_tier_url_is_used_for_that_tier_only(monkeypatch):
 
 @pytest.mark.unit
 def test_the_run_settings_and_report_name_each_tier_s_provider():
-    from tradingagents.graph.trading_graph import TradingAgentsGraph
-    from tradingagents.reporting import _header
+    from finbotagents.graph.trading_graph import TradingAgentsGraph
+    from finbotagents.reporting import _header
 
     graph = object.__new__(TradingAgentsGraph)
     graph.selected_analysts = ("market",)
